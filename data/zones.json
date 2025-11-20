@@ -1,0 +1,165 @@
+
+{
+  "zones": [
+    {
+      "id": "enchanted_forest",
+      "name": "Enchanted Forest",
+      "description": "A lush, vibrant forest, teeming with life. Sunlight filters through the canopy, illuminating a path teeming with strange and wonderful creatures.",
+      "min_level": 1,
+      "monsters": ["forest_spirit", "glimmering_moth", "mossy_golem", "thorned_creeper", "mischievous_pixie", "sylvan_pup", "grumble_fungus", "dewdrop_spider", "rootling", "bark_beetle", "whisper_wisp", "ancient_treant_protector", "glimmerwood_stag", "shadowcat_prowler", "guardian_of_the_glade"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "sunken_ruins",
+      "name": "Sunken Ruins",
+      "description": "The crumbling remains of an ancient city, now submerged in a murky swamp. The air is thick with the smell of decay, and strange creatures lurk beneath the surface.",
+      "min_level": 5,
+      "monsters": ["bog_dweller", "murkfin", "rusted_sentry", "lost_soul", "swamp_hag", "giant_leech", "algae_elemental", "ruin_crab", "grave_moss", "waterlogged_zombie", "eel_hound", "corrupted_water_spirit", "gravekeeper_golem", "naga_siren", "the_sunken_king"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "haunted_mines",
+      "name": "Haunted Mines",
+      "description": "An abandoned mine shaft, said to be haunted by the ghosts of miners who died in a tragic accident. The only light comes from glowing fungi and the occasional spectral apparition.",
+      "min_level": 10,
+      "monsters": ["mine_vermin", "rock_louse", "undead_miner", "ghostly_foreman", "gemstone_crawler", "ore_elemental", "tunnel_shrieker", "ironvein_bat", "pit_ghoul", "cavern_troll_whelp", "deep_dweller", "cursed_prospector", "motherlode_behemoth", "spirit_of_the_mountain", "the_mine_warden"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "scorched_plains",
+      "name": "Scorched Plains",
+      "description": "A barren wasteland of cracked earth and volcanic rock. The air shimmers with heat, and rivers of lava flow like fiery serpents across the landscape.",
+      "min_level": 15,
+      "monsters": ["ash_crawler", "emberling", "obsidian_hound", "magma_sprite", "charred_skeleton", "volcanic_drake", "sunstone_golem", "pyroclastic_elemental", "cinder_imp", "blazing_servitor", "hellfire_succubus", "inferno_lord", "ancient_magma_wyrm", "balrog_demon", "the_flame_archon"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "frozen_wastes",
+      "name": "Frozen Wastes",
+      "description": "A vast, icy tundra, where the wind howls like a hungry wolf. The snow is deep, and the only landmarks are towering glaciers and the frozen remains of long-dead creatures.",
+      "min_level": 20,
+      "monsters": ["frostbitten_reaver", "glacial_wolf", "ice_wraith", "tundra_yeti", "rime-encrusted_skeleton", "polar_bear", "icebound_elemental", "frozen_specter", "shard_golem", "winter_stag", "aurora_wisp", "frost_giant", "ice-heart_phoenix", "wendigo", "the_frost_queen"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "forgotten_desert",
+      "name": "Forgotten Desert",
+      "description": "A vast, sun-drenched desert, where ancient ruins lie buried beneath the sand. The heat is oppressive, and mirages dance on the horizon.",
+      "min_level": 25,
+      "monsters": ["dune_stalker", "sandstone_scorpion", "mummified_guardian", "scarab_swarm", "tomb_robber", "sun-bleached_vulture", "quicksand_elemental", "desert_djinn", "anubian_warrior", "cactoid_brute", "mirage_imp", "colossal_sandworm", "sphinx_guardian", "set_s_avatar", "the_pharaoh_king"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "whispering_forest",
+      "name": "Whispering Forest",
+      "description": "A dense, ancient forest, where the trees whisper secrets to one another. The air is thick with magic, and strange creatures of myth and legend make their home here.",
+      "min_level": 30,
+      "monsters": ["elder_treant", "moonpetal_pixie", "wildwood_satyr", "dire_grizzly", "ancient_guardian", "nightshade_dryad", "horned_lizard", "emerald_wolf", "thicket_lurker", "bramble_elemental", "sylvan_dragon", "avatar_of_the_hunt", "verdant_colossus", "archdruid_of_the_fang", "cenarius_wrath"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "abyssal_depths",
+      "name": "Abyssal Depths",
+      "description": "A dark, underwater realm, where the pressure is immense and sunlight cannot penetrate. Strange, bioluminescent creatures light the way, and ancient horrors lurk in the darkness.",
+      "min_level": 35,
+      "monsters": ["tidal_warrior", "abyssal_serpent", "deepwater_murloc", "coral_golem", "siren_enchanter", "leviathan_spawn", "hydro_elemental", "shipwreck_revenant", "brine_dragon", "kraken_whelp", "cthulian_horror", "triton_paladin", "deep_sea_behemoth", "ocean_s_fury", "neptulon_s_herald"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "ironforge",
+      "name": "Ironforge",
+      "description": "A bustling, subterranean city of dwarves and gnomes. The air is thick with the smell of smoke and steel, and the sound of hammers ringing on anvils is a constant refrain.",
+      "min_level": 40,
+      "monsters": ["ironclad_golem", "rune-forged_dwarf", "master_tinker_gnome", "berserker_champion", "steam-powered_automaton", "magma-forged_elemental", "deep_miner_veteran", "golem_parts_reaver", "titanium_vanguard", "mithril_golem", "earthshaker_giant", "the_iron_council", "ragnaros_s_lieutenant", "forgemaster_supreme", "king_under_the_mountain"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "outland",
+      "name": "Outland",
+      "description": "The shattered remains of a once-beautiful world, now floating in the Twisting Nether. The sky is a swirling vortex of color, and the ground is a patchwork of alien landscapes.",
+      "min_level": 45,
+      "monsters": ["fel-scarred_orc", "blight-hound", "chaos_ogre", "nether_drake", "doomguard_reaver", "shadowmoon_cultist", "siege_infernal", "eredar_sorcerer", "wrathguard_berserker", "fel_reaver", "void_terror", "kil_jaeden_s_chosen", "sargeras_s_hand", "archimonde_s_avatar", "the_dark_titan_s_echo"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "shadowfen",
+      "name": "Shadowfen",
+      "description": "A dark and treacherous swamp, where the water is black and still. The air is thick with the buzz of insects, and the trees are draped in curtains of moss.",
+      "min_level": 50,
+      "monsters": ["fen_lurker", "shadow_croc", "bog_strider", "gloom_wing", "mire_fiend", "darkwater_serpent", "venomous_dragonfly", "corpse_flower", "spore_bat", "rotting_treant", "murk_troll", "ancient_bog_hydra", "witch_of_the_fen", "gloomwood_behemoth", "the_swamp_lord"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "crystal_caves",
+      "name": "Crystal Caves",
+      "description": "A network of shimmering caves, where the walls are lined with crystals of every color. The air is cool and still, and the only sound is the gentle drip of water.",
+      "min_level": 55,
+      "monsters": ["crystal_back_tortoise", "geode_golem", "shard_spider", "crystalline_bat", "glimmer_beetle", "diamond_back_snake", "resonating_elemental", "amethyst_golem", "ruby_scorpion", "sapphire_lizard", "emerald_wasp", "crystal_fiend", "prismatic_wyrm", "living_crystal_cluster", "the_crystal_king"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "dragonblight",
+      "name": "Dragonblight",
+      "description": "A vast, frozen wasteland, littered with the bones of ancient dragons. The sky is a perpetual twilight, and the wind whispers tales of a long-forgotten war.",
+      "min_level": 60,
+      "monsters": ["draconic_skeleton", "frost_whelp", "azure_drake_hatchling", "blighted_ghoul", "spectral_dragon", "bone_raptor", "rime_serpent", "scourged_vulture", "death_knight_acolyte", "necrotic_slime", "frozen_soul", "frost_wyrm", "vengeful_spirit_of_a_dragon", "nerubian_vizier", "sindragosa_s_echo"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "un_goro_crater",
+      "name": "Un'Goro Crater",
+      "description": "A lush, prehistoric jungle, filled with giant dinosaurs and strange, alien life. The air is thick with the smell of flowers and decay, and the ground in constant tremor.",
+      "min_level": 65,
+      "monsters": ["devilsaur", "pterrodax", "ravasaur", "silithid_larva", "tar_lurker", "gorilla", "bloodpetal_lasher", "diemetradon", "stone_raptor", "crystal_back_stegodon", "volcanic_elemental", "tyrant_devilsaur", "tar_lord", "living_hive", "the_primal_king"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "silithus",
+      "name": "Silithus",
+      "description": "A barren, insect-infested desert, where giant crystalline structures jut out of the sand. The air is thick with the buzz of insects, and the ground is crawling with alien life.",
+      "min_level": 70,
+      "monsters": ["silithid_warrior", "silithid_spitter", "sand_reaver", "giant_scorpion", "dust_devil", "rock_borer", "silithid_tunneler", "twilight_cultist", "earth_elemental_servant", "qiraji_scarab", "stone_wasp", "silithid_colossus", "twilight_prophet", "obsidian_destroyer", "c_thun_s_herald"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "blackrock_mountain",
+      "name": "Blackrock Mountain",
+      "description": "A massive, volcanic mountain, carved into a fortress by the Dark Iron dwarves. The air is thick with smoke and ash, and the mountain rumbles with the sound of a thousand forges.",
+      "min_level": 75,
+      "monsters": ["dark_iron_dwarf", "fire_elemental", "lava_rumbler", "core_hound_pup", "blackrock_orc", "dragonkin_sorcerer", "smoldering_golem", "flame_imp", "black_drake", "spire_spider", "dark_iron_berserker", "molten_giant", "drakonid_crusher", "general_drakkisath", "ragnaros_s_avatar"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "outland_hellfire",
+      "name": "Outland - Hellfire Peninsula",
+      "description": "The shattered remains of a once-beautiful world, now a demonic wasteland. The sky is a swirling vortex of fel energy, and the ground is a patchwork of red rock and demonic citadels.",
+      "min_level": 80,
+      "monsters": ["fel_orc", "voidwalker", "imp_mother", "gan_arg_tinkerer", "fel_stalker", "warp_stalker", "spore_bat", "nether_ray", "zangarmarsh_hydra", "fungal_giant", "ethereal_trader", "doom_lord_kazzak_s_shade", "void_reaver", "supreme_fel_lord", "illidan_s_disciple"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "northrend_icecrown",
+      "name": "Northrend - Icecrown Citadel",
+      "description": "A vast, frozen continent, ruled by the Lich King. The sky is a perpetual winter, and the land is covered in a thick blanket of snow and ice.",
+      "min_level": 85,
+      "monsters": ["scourge_ghoul", "crypt_fiend", "gargoyle", "vrykul_warrior", "magnataur", "iron_dwarf", "nerubian_warrior", "shovel_tusk", "flesh_giant", "dark_necromancer", "plague_spreader", "the_black_knight", "scourge_abomination", "frost_lich", "the_lich_king_s_champion"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "pandaria_vale",
+      "name": "Pandaria - Vale of Eternal Blossoms",
+      "description": "A hidden, mystical land, shrouded in mist. The land is a patchwork of lush forests, towering mountains, and serene valleys.",
+      "min_level": 90,
+      "monsters": ["mogu_warrior", "saurok", "mantid_swarm", "sha_ling", "hozen_brawler", "jinyu_waterspeaker", "crane_spirit", "yaungol_warrior", "spirit_of_harmony", "jade_serpent", "vermin", "mogu_sorcerer", "mantid_paragon", "sha_of_doubt", "the_thunder_king_s_shade"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    },
+    {
+      "id": "draenor_tanaan",
+      "name": "Draenor - Tanaan Jungle",
+      "description": "A savage, untamed world, where orcs and draenei clash in a brutal war. The land is a patchwork of lush jungles, arid deserts, and jagged mountains.",
+      "min_level": 95,
+      "monsters": ["iron_horde_grunt", "thunderlord_wolfrider", "shadowmoon_acolyte", "botani", "saberon", "genesaur", "ogron", "rylak", "fungal_whale", "spore_giant", "iron_reaver", "iron_horde_warmaster", "shadow_lord_iskar", "teron_gor", "grommash_hellscream_s_echo"],
+      "item_drops": ["hat", "armor", "pants", "gloves", "boots", "necklace", "ring", "offhand", "weapon"]
+    }
+  ]
+}

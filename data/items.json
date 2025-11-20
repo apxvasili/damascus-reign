@@ -1,0 +1,65 @@
+
+{
+  "prefixes": {
+    "F": ["Rusty", "Broken", "Worn", "Torn", "Frayed", "Cracked", "Dirty", "Old", "Used", "Second-hand"],
+    "E": ["Simple", "Basic", "Common", "Plain", "Rough", "Crude", "Unrefined", "Mundane", "Standard", "Ordinary"],
+    "D": ["Sturdy", "Decent", "Average", "Fair", "Serviceable", "Reliable", "Functional", "Unadorned", "Solid", "Well-made"],
+    "C": ["Fine", "Superior", "Reinforced", "Engraved", "Ornate", "Polished", "Balanced", "Smithed", "Crafted", "Quality"],
+    "B": ["Excellent", "Masterwork", "Exceptional", "Gleaming", "Shining", "Pristine", "Flawless", "Impeccable", "Superb", "Choice"],
+    "A": ["Heroic", "Noble", "Ancient", "Runic", "Blessed", "Sacred", "Hallowed", "Consecrated", "Divine", "Holy"],
+    "S": ["Legendary", "Mythical", "Epic", "Fabled", "Unreal", "Impossible", "Titanic", "Colossal"],
+    "SS": ["Godly", "Demonic", "Celestial", "Abyssal", "Void-touched", "Star-forged"],
+    "SSS": ["Apocalyptic", "Cataclysmic", "World-ending", "Dimension-shattering"],
+    "X": ["Quantum", "Reality-bending", "Singularity", "Event Horizon", "God-slayer's"]
+  },
+  "names": {
+    "hat": [
+      "Helm", "Cap", "Coif", "Mask", "Crown", "Circlet", "Diadem", "Armet", "Sallet", "Bascinet", "Barbute", "Close Helm", "Great Helm", "Morion", "Kettle Hat", "Nasal Helm", "Spangenhelm", "Phrygian Cap", "Coronet", "Wreath"
+    ],
+    "armor": [
+      "Plate", "Mail", "Scale", "Leather", "Cloth", "Hide", "Fur", "Studded Leather", "Brigandine", "Lamellar", "Splint", "Ring", "Chain", "Full Plate", "Half Plate", "Breastplate", "Cuirass", "Aketon", "Gambeson", "Hauberk"
+    ],
+    "pants": [
+      "Pants", "Breeches", "Trousers", "Kilt", "Skirt", "Loincloth", "Leggings", "Slacks", "Chaps", "Tights", "Cuisses", "Greaves", "Chausses", "Hose", "Poleyns", "Schynbalds", "Diechlinge", "Tassets", "Faulds", "Brayette"
+    ],
+    "gloves": [
+      "Gloves", "Mitts", "Gauntlets", "Handwraps", "Bracers", "Cuffs", "Manifers", "Fingerless Gloves", "Claws", "Talons", "Vambraces", "Rerebrace", "Besagew", "Spaulders", "Elbow Cops", "Wrist Guards", "Arm Harness", "Bazubands", "Kusari-Gote", "Manica"
+    ],
+    "boots": [
+      "Boots", "Shoes", "Sandals", "Moccasins", "Slippers", "Waders", "Greaves", "Leggings", "Sabatons", "Sollerets", "Caligae", "Buskins", "Poulaines", "Crakows", "Ghillies", "Mocassins", "Turnshoes", "Pattens", "Clogs", "Slippers"
+    ],
+    "necklace": [
+      "Amulet", "Talisman", "Charm", "Pendant", "Gorget", "Choker", "Locket", "Torc", "Lunula", "Collar", "Medallion", "Beads", "Chain", "Scarab", "Eye of Horus", "Ankh", "Trinket", "Relic", "Brooch", "Clasp"
+    ],
+    "ring": [
+      "Ring", "Band", "Signet", "Loop", "Hoop", "Circle", "Annulet", "Seal", "Chevalier", "Wedding Band", "Engagement Ring", "Claddagh Ring", "Eternity Ring", "Friendship Ring", "Poison Ring", "Puzzle Ring", "Rosary Ring", "Championship Ring", "Birthstone Ring", "Gimmel Ring"
+    ],
+    "offhand": [
+      "Shield", "Buckler", "Targe", "Kite Shield", "Tower Shield", "Aegis", "Bulwark", "Barrier", "Guardian", "Protector", "Ward", "Bastion", "Rampart", "Spellbook", "Tome", "Grimoire", "Orb", "Focus", "Effigy", "Idol"
+    ],
+    "weapon": [
+      "Sword", "Axe", "Mace", "Hammer", "Spear", "Dagger", "Bow", "Crossbow", "Sling", "Staff",
+      "Greatsword", "Battleaxe", "Warhammer", "Halberd", "Pike", "Lance", "Rapier", "Scimitar", "Katana", "Falchion",
+      "Shortsword", "Gladius", "Longsword", "Bastard Sword", "Zweihander", "Claymore", "Estoc", "Cutlass", "Saber", "Broadsword",
+      "Hand Axe", "Tomahawk", "Hatchet", "Throwing Axe", "Double Axe", "Greataxe", "Bardiche", "Voulge", "Lochaber Axe", "Ono",
+      "Club", "Morning Star", "Flail", "War Pick", "Maul", "Scepter", "Bec de Corbin", "Goedendag", "Spiked Club", "Flanged Mace",
+      "Javelin", "Trident", "Boar Spear", "Partisan", "Glaive", "Naginata", "Yari", "Awl Pike", "Corseque", "Spontoon",
+      "Knife", "Dirk", "Kukri", "Tanto", "Stiletto", "Rondel Dagger", "Poignard", "Main Gauche", "Cinquedea", "Kris",
+      "Shortbow", "Longbow", "Composite Bow", "Recurve Bow", "Yew Bow", "Flatbow", "Self Bow", "Cable-backed Bow", "Holmegaard Bow", "Penobscot Bow",
+      "Light Crossbow", "Heavy Crossbow", "Arbalest", "Repeating Crossbow", "Chu-ko-nu", "Gastraphetes", "Oxybeles", "Ballista", "Scorpio", "Polybolos",
+      "Rod", "Wand", "Cane", "Walking Stick", "Quarterstaff", "Bō", "Jo", "Hanbō", "Shillelagh", "Gunbai"
+    ]
+  },
+  "suffixes": [
+    "of the Bear", "of the Wolf", "of the Eagle", "of the Turtle", "of the Fox", "of the Owl", "of the Serpent", "of the Dragon", "of the Phoenix", "of the Griffin",
+    "of Strength", "of Agility", "of Intellect", "of Wisdom", "of Charisma", "of Luck", "of Fortitude", "of Dexterity", "of Constitution", "of Power",
+    "of Fire", "of Ice", "of Lightning", "of Earth", "of Wind", "of Water", "of Light", "of Darkness", "of Shadow", "of the Void",
+    "of Slaughter", "of Protection", "of Healing", "of Warding", "of Banishment", "of Binding", "of Striking", "of Smiting", "of Deflection", "of Absorption",
+    "of the Mountain", "of the River", "of the Forest", "of the Desert", "of the Plains", "of the Swamp", "of the Tundra", "of the Volcano", "of the Ocean", "of the Sky",
+    "of the King", "of the Queen", "of the Emperor", "of the Empress", "of the Warlord", "of the Chieftain", "of the Knight", "of the Mage", "of the Rogue", "of the Priest",
+    "of Sorrow", "of Joy", "of Rage", "of Fear", "of Hope", "of Despair", "of Courage", "of Cowardice", "of Love", "of Hate",
+    "of the Sun", "of the Moon", "of the Stars", "of the Comet", "of the Eclipse", "of the Galaxy", "of the Nebula", "of the Supernova", "of the Black Hole", "of the Universe",
+    "of Time", "of Space", "of Reality", "of Dreams", "of Nightmares", "of Illusions", "of Fate", "of Destiny", "of Doom", "of Eternity",
+    "the Swift", "the Strong", "the Wise", "the Brave", "the Bold", "the Just", "the Cruel", "the Merciful", "the Greedy", "the Generous"
+  ]
+}
