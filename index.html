@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Damascus Reign</title>
+    <style>
+        :root {
+            --bg-color: #1a1814; --panel-bg: #12100e; --text-main: #c2b280;
+            --text-dim: #6b6b6b; --highlight: #d4af37; --danger: #a03030;
+            --success: #558b2f; --border: #4a4a4a; --font-stack: 'Courier New', Courier, monospace;
+        }
+        * { box-sizing: border-box; }
+        body {
+            background-color: #000; margin: 0; height: 100vh; font-family: var(--font-stack);
+            overflow: hidden; color: var(--text-main); display: flex; justify-content: center; align-items: center;
+        }
+        #crt-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none; z-index: 10;
+        }
+        #game-container {
+            width: 95%; max-width: 1400px; height: 90%; display: grid;
+            grid-template-columns: 250px 1fr 250px; gap: 10px; position: relative; z-index: 1;
+        }
+        .panel {
+            background-color: var(--bg-color); border: 2px solid var(--text-dim); display: flex;
+            flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.8); padding: 15px; overflow: hidden;
+        }
+        .side-panel { background-color: var(--panel-bg); font-size: 0.9em; }
+        .panel-header {
+            color: var(--highlight); border-bottom: 1px solid var(--text-dim); padding-bottom: 5px;
+            margin-bottom: 10px; text-transform: uppercase; font-weight: bold; text-align: center; letter-spacing: 2px;
+        }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .stat-label { color: var(--text-dim); }
+        .stat-val { color: var(--text-main); font-weight: bold; }
+        .progress-bar-container { width: 100%; background: var(--border); border-radius: 2px; margin: 5px 0; height: 12px; border: 1px solid var(--text-dim); }
+        .progress-bar { background: var(--success); height: 100%; width: 0%; border-radius: 1px; transition: width 0.2s linear; }
+        .cmd-entry { margin-bottom: 8px; }
+        .cmd-name { color: var(--highlight); font-weight: bold; display: block; }
+        .cmd-desc { color: var(--text-dim); font-size: 0.85em; }
+        #main-terminal { position: relative; padding: 0; }
+        #location-header {
+            background-color: var(--text-dim); color: #000; padding: 5px 15px; font-weight: bold;
+            text-align: center; text-transform: uppercase; letter-spacing: 3px; border-bottom: 2px solid var(--border);
+        }
+        #output { flex-grow: 1; overflow-y: auto; padding: 15px; white-space: pre-wrap; font-size: 1.1em; }
+        #output::-webkit-scrollbar, .side-panel::-webkit-scrollbar { width: 8px; }
+        #output::-webkit-scrollbar-track, .side-panel::-webkit-scrollbar-track { background: #111; }
+        #output::-webkit-scrollbar-thumb, .side-panel::-webkit-scrollbar-thumb { background: var(--text-dim); border: 1px solid var(--bg-color); }
+        .input-area { display: flex; border-top: 1px solid var(--text-dim); padding: 10px 15px; background: var(--bg-color); }
+        .prompt { color: var(--highlight); margin-right: 10px; font-weight: bold; }
+        #cmd-input {
+            background: transparent; border: none; color: var(--text-main); font-family: var(--font-stack);
+            font-size: 16px; flex-grow: 1; outline: none;
+        }
+        .msg-system { color: var(--text-dim); font-style: italic; }
+        .msg-error { color: var(--danger); }
+        .msg-gold { color: var(--highlight); font-weight: bold; }
+        .msg-combat { color: #d35400; }
+        .msg-enemy { color: #c0392b; font-weight: bold; }
+        .msg-item { color: #88c0d0; }
+        .msg-success { color: var(--success); }
+        .msg-info { color: #2980b9; }
+        .header-art { color: var(--highlight); font-weight: bold; line-height: 1.2; font-size: 0.8em; white-space: pre; }
+        
+        @media (max-width: 900px) {
+            #game-container { grid-template-columns: 1fr; }
+            .side-panel { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="crt-overlay"></div>
+
+<div id="game-container">
+    <aside id="stats-panel" class="panel side-panel">
+        <div class="panel-header">Chronicle</div>
+        <div id="stats-content"></div>
+    </aside>
+
+    <main id="main-terminal" class="panel">
+        <div id="location-header">SYSTEM BOOT</div>
+        <div id="output"></div>
+        <div class="input-area">
+            <span class="prompt">Reign:></span>
+            <input type="text" id="cmd-input" autocomplete="off" autofocus>
+        </div>
+    </main>
+
+    <aside id="help-panel" class="panel side-panel">
+        <div class="panel-header">Codex</div>
+        <div id="help-content"></div>
+    </aside>
+</div>
+
+<script type="module">
+
+/* CLANKER'S NOTE: 
+    I've included DEFAULT_DATA so this file works standalone for testing.
+    The system prioritizes fetching from ./data/*.json, but falls back here if that fails.
+    Your local setup is respected.
+*/
+const DEFAULT_DATA = {
+    zones: {
+        zones: [
+            { id: "enchanted_forest", name: "Enchanted Forest", min_level: 1, monsters: ["goblin_scout", "wild_wolf"] },
+            { id: "ruined_outpost", name: "Ruined Outpost", min_level: 3, monsters: ["bandit_thug", "skeleton_warrior"] },
+            { id: "crystal_caverns", name: "Crystal Caverns", min_level: 5, monsters: ["crystal_golem", "shade"] },
+            { id: "iron_citadel", name: "Iron Citadel", min_level: 10, monsters: ["iron_knight", "armored_beast"] }
+        ]
+    },
+    monsters: {
+        "goblin_scout": { name: "Goblin Scout", hp: 20, maxHp: 20, damage: 4, xp: 15, gold: 5 },
+        "wild_wolf": { name: "Wild Wolf", hp: 35, maxHp: 35, damage: 6, xp: 20, gold: 0 },
+        "bandit_thug": { name: "Bandit Thug", hp: 45, maxHp: 45, damage: 8, xp: 35, gold: 12 },
+        "skeleton_warrior": { name: "Skeleton Warrior", hp: 50, maxHp: 50, damage: 10, xp: 40, gold: 2 },
+        "crystal_golem": { name: "Crystal Golem", hp: 100, maxHp: 100, damage: 15, xp: 80, gold: 50 },
+        "shade": { name: "Shade", hp: 60, maxHp: 60, damage: 18, xp: 70, gold: 0 },
+        "iron_knight": { name: "Iron Knight", hp: 150, maxHp: 150, damage: 25, xp: 150, gold: 100 },
+        "armored_beast": { name: "Armored Beast", hp: 200, maxHp: 200, damage: 20, xp: 180, gold: 0 }
+    }
+};
+
+class UI {
+    constructor() {
+        this.output = document.getElementById('output');
+        this.input = document.getElementById('cmd-input');
+        this.stats = document.getElementById('stats-content');
+        this.help = document.getElementById('help-content');
+        this.locationHeader = document.getElementById('location-header');
+    }
+
+    print(msg, className = '') {
+        const div = document.createElement('div');
+        div.className = className;
+        div.innerHTML = msg; // Changed to innerHTML to support coloring inside strings
+        this.output.appendChild(div);
+        this.output.scrollTop = this.output.scrollHeight;
+    }
+
+    printArt(art) { this.print(art, 'header-art'); }
+    
+    clear() { this.output.innerHTML = ''; }
+    
+    focus() { this.input.focus(); }
+    
+    addProgressBar() {
+        const container = document.createElement('div');
+        container.className = 'progress-bar-container';
+        const bar = document.createElement('div');
+        bar.className = 'progress-bar';
+        container.appendChild(bar);
+        this.output.appendChild(container);
+        this.output.scrollTop = this.output.scrollHeight;
+        return bar;
+    }
+
+    updateStats(player, zones) {
+        if (!player) {
+            this.stats.innerHTML = '<div style="text-align:center; color:var(--text-dim);">No Data</div>';
+            return;
+        }
+        const zone = zones.find(z => z.id === player.location);
+        const xpReq = player.level * 100;
+        const xpPercent = Math.floor((player.xp / xpReq) * 100);
+        
+        this.stats.innerHTML = `
+            <div class="stat-row"><span class="stat-label">Name:</span> <span class="stat-val">${player.name}</span></div>
+            <div class="stat-row"><span class="stat-label">Level:</span> <span class="stat-val">${player.level}</span></div>
+            <div class="stat-row"><span class="stat-label">HP:</span> <span class="stat-val" style="color:${player.hp < player.maxHp * 0.3 ? 'var(--danger)' : 'var(--text-main)'}">${player.hp} / ${player.maxHp}</span></div>
+            <div class="stat-row"><span class="stat-label">XP:</span> <span class="stat-val">${player.xp} / ${xpReq} (${xpPercent}%)</span></div>
+            <div class="stat-row"><span class="stat-label">Gold:</span> <span class="stat-val" style="color:var(--highlight)">${player.gold}</span></div>
+            <br>
+            <div class="stat-row"><span class="stat-label">Weapon:</span> <span class="stat-val">${player.equipment.weapon.name}</span></div>
+            <div class="stat-row"><span class="stat-label">Dmg:</span> <span class="stat-val">${player.equipment.weapon.damage}</span></div>
+            <div class="stat-row"><span class="stat-label">Armor:</span> <span class="stat-val">${player.equipment.armor.name}</span></div>
+            <br>
+            <div class="stat-row"><span class="stat-label">Zone:</span> <span class="stat-val">${zone ? zone.name : 'Unknown'}</span></div>
+        `;
+    }
+
+    updateLocationHeader(text) { this.locationHeader.textContent = text; }
+
+    renderCommandList(commands) {
+        this.help.innerHTML = '';
+        for (const cmd in commands) {
+            if(cmd === '') {
+                const sep = document.createElement('div');
+                sep.className = 'cmd-entry';
+                sep.innerHTML = `<span class="cmd-desc" style="text-align:center; display:block; margin-top:10px; border-bottom:1px solid #333;">${commands[cmd].desc}</span>`;
+                this.help.appendChild(sep);
+                continue;
+            }
+            const entry = document.createElement('div');
+            entry.className = 'cmd-entry';
+            entry.innerHTML = `<span class="cmd-name">${cmd}</span><span class="cmd-desc">${commands[cmd].desc}</span>`;
+            this.help.appendChild(entry);
+        }
+    }
+}
+
+class Player {
+    constructor(name) {
+        this.name = name;
+        this.hp = 100;
+        this.maxHp = 100;
+        this.gold = 50;
+        this.xp = 0;
+        this.level = 1;
+        this.inventory = [];
+        this.location = "enchanted_forest";
+        this.equipment = {
+            weapon: { name: "Rusty Dagger", damage: 5 },
+            armor: { name: "Torn Tunic", defense: 1 }
+        };
+    }
+    isAlive() { return this.hp > 0; }
+    
+    heal(amount) { this.hp = Math.min(this.hp + amount, this.maxHp); }
+    
+    takeDamage(amount) {
+        const mitigation = this.equipment.armor.defense;
+        const actualDmg = Math.max(1, amount - mitigation);
+        this.hp -= actualDmg;
+        return actualDmg;
+    }
+
+    gainXp(amount) {
+        this.xp += amount;
+        const req = this.level * 100;
+        if (this.xp >= req) {
+            this.xp -= req;
+            this.levelUp();
+            return true;
+        }
+        return false;
+    }
+
+    levelUp() {
+        this.level++;
+        this.maxHp += 20;
+        this.hp = this.maxHp;
+        // Simple scaling
+        this.equipment.weapon.damage += 2; 
+    }
+}
+
+class GameCore {
+    constructor() {
+        this.ui = new UI();
+        this.player = null;
+        this.gameState = 'IDLE'; // IDLE, COMBAT, RESTING
+        this.combatTarget = null;
+        
+        this.zones = [];
+        this.monsters = {};
+        this.saves = {};
+
+        this.commandList = {
+            'help': { desc: "List all commands.", fn: this.cmdHelp.bind(this) },
+            'status': { desc: "Display stats.", fn: this.cmdStatus.bind(this) },
+            'zones': { desc: "List zones.", fn: this.cmdZones.bind(this) },
+            'travel <zone>': { desc: "Travel to zone.", fn: this.cmdTravel.bind(this) },
+            'hunt': { desc: "Find enemies.", fn: this.cmdHunt.bind(this) },
+            'rest': { desc: "Recover HP.", fn: this.cmdRest.bind(this) },
+            'clear': { desc: "Clear screen.", fn: this.cmdClear.bind(this) },
+            'attack': { desc: "Combat: Attack.", fn: this.cmdAttack.bind(this) },
+            'flee': { desc: "Combat: Escape.", fn: this.cmdFlee.bind(this) },
+            '': { desc: "SYSTEM" },
+            'new <name>': { desc: "New character.", fn: this.cmdNew.bind(this) },
+            'load <name>': { desc: "Load character.", fn: this.cmdLoad.bind(this) },
+            'delete <name>': { desc: "Delete char.", fn: this.cmdDelete.bind(this) },
+        };
+        
+        this.init();
+    }
+
+    async init() {
+        this.ui.renderCommandList(this.commandList);
+        this.initInput();
+
+        // Fallback data loading mechanism
+        try {
+            // Attempt to fetch local files first
+            const zoneReq = fetch('./data/zones.json');
+            const mobReq = fetch('./data/monsters.json');
+            
+            // We use a timeout Promise to fail fast if files aren't there (mocking 404 behavior in some envs)
+            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 500));
+            
+            const [zonesRes, monstersRes] = await Promise.race([Promise.all([zoneReq, mobReq]), timeout]);
+
+            if (!zonesRes.ok || !monstersRes.ok) throw new Error("File not found");
+
+            this.zones = (await zonesRes.json()).zones;
+            this.monsters = await monstersRes.json();
+            console.log("Loaded from local JSON");
+        } catch (error) {
+            console.warn("Could not load local JSON data. Using fallback embedded data.", error);
+            this.zones = DEFAULT_DATA.zones.zones;
+            this.monsters = DEFAULT_DATA.monsters;
+        }
+
+        // Load saves
+        try {
+            this.saves = JSON.parse(localStorage.getItem('damascus_reign_saves') || '{}');
+        } catch(e) {
+            this.saves = {};
+        }
+
+        // Simplified Art to prevent syntax errors with escaping
+        this.ui.printArt(
+`
+▓█████▄  ▄▄▄       ███▄ ▄███▓ ▄▄▄        ██████  ▄████▄   █    ██   ██████ 
+▒██▀ ██▌▒████▄    ▓██▒▀█▀ ██▒▒████▄    ▒██    ▒ ▒██▀ ▀█   ██  ▓██▒▒██    ▒ 
+░██   █▌▒██  ▀█▄  ▓██    ▓██░▒██  ▀█▄  ░ ▓██▄   ▒▓█    ▄ ▓██  ▒██░░ ▓██▄   
+░▓█▄   ▌░██▄▄▄▄██ ▒██    ▒██ ░██▄▄▄▄██   ▒   ██▒▒▓▓▄ ▄██▒▓▓█  ░██░  ▒   ██▒
+░▒████▓  ▓█   ▓██▒▒██▒   ░██▒ ▓█   ▓██▒▒██████▒▒▒ ▓███▀ ░▒▒█████▓ ▒██████▒▒
+ ▒▒▓  ▒  ▒▒   ▓▒█░░ ▒░   ░  ░ ▒▒   ▓▒█░▒ ▒▓▒ ▒ ░░ ░▒ ▒  ░░▒▓▒ ▒ ▒ ▒ ▒▓▒ ▒ ░
+ ░ ▒  ▒   ▒   ▒▒ ░░  ░      ░  ▒   ▒▒ ░░ ░▒  ░ ░  ░  ▒   ░░▒░ ░ ░ ░ ░▒  ░ ░
+ ░ ░  ░   ░   ▒   ░      ░     ░   ▒   ░  ░  ░  ░         ░░░ ░ ░ ░  ░  ░  
+   ░          ░  ░       ░         ░  ░      ░  ░ ░         ░           ░  
+ ░                                              ░                          
+          REIGN OF IRON AND DUST`
+        );
+        
+        this.showWelcomeScreen();
+    }
+    
+    initInput() {
+        this.ui.input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const value = this.ui.input.value.trim();
+                this.ui.input.value = '';
+                if (value) this.processCommand(value);
+            }
+        });
+        document.addEventListener('click', () => this.ui.focus());
+    }
+
+    showWelcomeScreen() {
+        this.ui.updateLocationHeader("CHARACTER SELECT");
+        this.ui.print("Authentication required.", "msg-system");
+        const saveNames = Object.keys(this.saves);
+        if (saveNames.length > 0) {
+            this.ui.print("Existing Chronicles:", "msg-gold");
+            saveNames.forEach(name => this.ui.print(`- ${name}`));
+            this.ui.print("Use <span class='msg-gold'>load &lt;name&gt;</span> or <span class='msg-gold'>new &lt;name&gt;</span>.", "msg-system");
+        } else {
+            this.ui.print("Use <span class='msg-gold'>new &lt;name&gt;</span> to initialize.", "msg-system");
+        }
+    }
+    
+    processCommand(input) {
+        // Basic parsing
+        const parts = input.trim().split(/\s+/); // handle multiple spaces
+        const command = parts[0].toLowerCase();
+        const args = parts.slice(1).join(' ');
+
+        this.ui.print(`> ${input}`, 'msg-system');
+
+        // Find command definition
+        const cmdKey = Object.keys(this.commandList).find(k => k.split(' ')[0] === command);
+        const cmd = this.commandList[cmdKey];
+
+        // 1. No Player Loaded Constraints
+        if (!this.player) {
+            if (['new', 'load', 'delete', 'help', 'clear'].includes(command)) {
+                if(cmd) cmd.fn(args);
+            } else {
+                this.ui.print("Access Denied: No active character context.", "msg-error");
+            }
+            return;
+        }
+
+        // 2. Game State Constraints
+        if (this.gameState === 'RESTING') {
+            return this.ui.print("Action blocked: You are resting.", "msg-error");
+        }
+        
+        // 3. Combat Constraints
+        if (this.gameState === 'COMBAT') {
+            const combatCmds = ['attack', 'flee', 'status', 'help', 'clear'];
+            if (!combatCmds.includes(command)) {
+                return this.ui.print("Action blocked: You are in combat! (attack/flee)", "msg-error");
+            }
+        } else if (command === 'attack' || command === 'flee') {
+            return this.ui.print("There is nothing to fight here.", "msg-system");
+        }
+
+        if (cmd) {
+            cmd.fn(args);
+        } else {
+            this.ui.print("Syntax Error: Unknown command.", "msg-error");
+        }
+    }
+
+    // --- SAVE & LOAD ---
+    cmdNew(name) {
+        if (!name) return this.ui.print("Syntax: new <name>", "msg-error");
+        if (this.saves[name]) return this.ui.print(`Error: Identity '${name}' already exists.`, "msg-error");
+
+        this.player = new Player(name);
+        this.gameState = 'IDLE';
+        this.saveState();
+        this.ui.clear();
+        this.ui.print(`Identity created: ${name}. Initialization complete.`, "msg-success");
+        this.ui.print(`You awake in the ${this.getZoneName(this.player.location)}.`, "msg-info");
+        this.updateAllPanels();
+    }
+    
+    cmdLoad(name) {
+        if (!name) return this.ui.print("Syntax: load <name>", "msg-error");
+        if (!this.saves[name]) return this.ui.print(`Error: Identity '${name}' not found.`, "msg-error");
+
+        // Restore player object prototype
+        const saveData = this.saves[name];
+        this.player = new Player(name);
+        Object.assign(this.player, saveData);
+        
+        // Ensure prototype methods work by deep merging if necessary, 
+        // but Object.assign usually handles simple JSON structures ok. 
+        // Note: Nested objects like equipment might lose prototype if they had one, but here they are plain objects.
+
+        this.gameState = 'IDLE';
+        this.combatTarget = null; // Reset combat on load
+        this.ui.clear();
+        this.ui.print(`Identity restored: ${name}.`, "msg-success");
+        this.updateAllPanels();
+    }
+
+    cmdDelete(name) {
+        if (!name) return this.ui.print("Syntax: delete <name>", "msg-error");
+        if (!this.saves[name]) return this.ui.print(`Error: Identity '${name}' not found.`, "msg-error");
+        
+        delete this.saves[name];
+        this.saveState(false); 
+        this.ui.print(`Identity '${name}' purged from records.`, "msg-success");
+
+        if (this.player && this.player.name === name) {
+            this.player = null;
+            this.gameState = 'IDLE';
+            this.ui.clear();
+            this.showWelcomeScreen();
+        }
+    }
+    
+    saveState(inGame = true) {
+        if (inGame && this.player) {
+            this.saves[this.player.name] = this.player;
+        }
+        localStorage.setItem('damascus_reign_saves', JSON.stringify(this.saves));
+    }
+
+    handlePlayerDeath() {
+        this.ui.print("CRITICAL FAILURE: Vitals zero.", "msg-error");
+        this.ui.print("Your chronicle has ended.", "msg-error");
+        
+        const name = this.player.name;
+        delete this.saves[name];
+        this.saveState(false);
+        
+        this.player = null;
+        this.gameState = 'IDLE';
+        this.combatTarget = null;
+        this.updateAllPanels();
+        
+        setTimeout(() => {
+            this.ui.clear();
+            this.showWelcomeScreen();
+        }, 4000);
+    }
+
+    // --- GAMEPLAY ---
+    getZoneName(id) {
+        const z = this.zones.find(z => z.id === id);
+        return z ? z.name : id;
+    }
+
+    cmdHelp() { this.ui.renderCommandList(this.commandList); }
+    cmdClear() { this.ui.clear(); }
+    cmdStatus() { this.updateAllPanels(); }
+    
+    cmdZones() {
+        this.ui.print("--- KNOWN ZONES ---", "msg-gold");
+        this.zones.forEach(zone => {
+            const unlocked = this.player.level >= zone.min_level;
+            const lockStatus = unlocked ? `<span class="msg-success">ACCESSIBLE</span>` : `<span class="msg-error">RESTRICTED (Lvl ${zone.min_level})</span>`;
+            this.ui.print(`${zone.name.padEnd(25)} ${lockStatus}`);
+        });
+    }
+
+    cmdTravel(destinationInput) {
+        if (!destinationInput) return this.ui.print("Syntax: travel <zone_name>", "msg-error");
+        
+        // Fuzzy search for zone
+        const search = destinationInput.toLowerCase();
+        const zone = this.zones.find(z => z.name.toLowerCase().includes(search) || z.id === search);
+
+        if (!zone) return this.ui.print(`Navigation Error: Zone '${destinationInput}' unknown.`, "msg-error");
+        if (this.player.level < zone.min_level) return this.ui.print(`Access Denied: Clearance Level ${zone.min_level} required.`, "msg-error");
+        if (this.player.location === zone.id) return this.ui.print("You are already at this location.", "msg-system");
+
+        this.player.location = zone.id;
+        this.ui.print(`Traveling to ${zone.name}...`, "msg-info");
+        
+        // Simulate travel time? Nah, instant for now.
+        this.ui.print(`Arrival confirmed: ${zone.name}.`, "msg-success");
+        this.updateAllPanels();
+        this.saveState();
+    }
+
+    cmdRest() {
+        if (this.player.hp >= this.player.maxHp) return this.ui.print("Vitals optimal. Rest unnecessary.", "msg-system");
+        
+        this.gameState = 'RESTING';
+        this.ui.print("Initiating recovery cycle...", "msg-system");
+        const hpToHeal = this.player.maxHp - this.player.hp;
+        const totalRestTime = 3000; // Fixed 3 seconds for better UX
+
+        const bar = this.ui.addProgressBar();
+        let elapsed = 0;
+        const interval = 50;
+
+        const restInterval = setInterval(() => {
+            elapsed += interval;
+            const progress = Math.min((elapsed / totalRestTime) * 100, 100);
+            bar.style.width = `${progress}%`;
+            
+            if (elapsed >= totalRestTime) {
+                clearInterval(restInterval);
+                this.player.heal(this.player.maxHp);
+                this.gameState = 'IDLE';
+                this.ui.print("Recovery complete. Vitals restored.", "msg-success");
+                this.updateAllPanels();
+                this.saveState();
+            }
+        }, interval);
+    }
+    
+    // --- COMBAT SYSTEM ---
+    cmdHunt() {
+        const zone = this.zones.find(z => z.id === this.player.location);
+        if (!zone || !zone.monsters || zone.monsters.length === 0) {
+            return this.ui.print("Sensors detect no threats in this sector.", "msg-system");
+        }
+
+        this.ui.print("Scanning for hostiles...", "msg-system");
+        
+        // Random chance to find something
+        if (Math.random() > 0.2) {
+            const mobId = zone.monsters[Math.floor(Math.random() * zone.monsters.length)];
+            const mobTemplate = this.monsters[mobId];
+            
+            if (!mobTemplate) {
+                return this.ui.print(`Error: Entity '${mobId}' data missing.`, "msg-error");
+            }
+
+            // Clone monster so we don't modify the template
+            this.combatTarget = { ...mobTemplate, id: mobId };
+            this.gameState = 'COMBAT';
+            
+            this.ui.print(`WARNING: ${this.combatTarget.name} detected!`, "msg-enemy");
+            this.ui.print(`Level: ?? | HP: ${this.combatTarget.hp} | Dmg: ${this.combatTarget.damage}`, "msg-info");
+            this.ui.print("Combat engaged. Commands: attack, flee", "msg-combat");
+        } else {
+            this.ui.print("Sector clear.", "msg-system");
+        }
+    }
+
+    cmdAttack() {
+        if (!this.combatTarget) {
+            this.gameState = 'IDLE';
+            return this.ui.print("No target selected.", "msg-error");
+        }
+
+        // 1. Player attacks
+        const pDmg = this.player.equipment.weapon.damage; // Flat damage for now
+        // Add randomness?
+        const actualPDmg = Math.floor(pDmg * (0.8 + Math.random() * 0.4));
+        
+        this.combatTarget.hp -= actualPDmg;
+        this.ui.print(`You hit ${this.combatTarget.name} for ${actualPDmg} damage.`, "msg-success");
+
+        // 2. Check Monster Death
+        if (this.combatTarget.hp <= 0) {
+            return this.endCombat(true);
+        }
+
+        // 3. Monster attacks
+        this.monsterAttack();
+        this.updateAllPanels();
+    }
+
+    cmdFlee() {
+        if (!this.combatTarget) return;
+
+        this.ui.print("Attempting tactical retreat...", "msg-system");
+        if (Math.random() > 0.4) {
+            this.ui.print("Retreat successful.", "msg-success");
+            this.combatTarget = null;
+            this.gameState = 'IDLE';
+            this.updateAllPanels();
+        } else {
+            this.ui.print("Retreat failed! The enemy closes in.", "msg-error");
+            this.monsterAttack();
+            this.updateAllPanels();
+        }
+    }
+
+    monsterAttack() {
+        const mDmg = this.combatTarget.damage;
+        const taken = this.player.takeDamage(mDmg);
+        this.ui.print(`${this.combatTarget.name} attacks you for ${taken} damage!`, "msg-combat");
+
+        if (!this.player.isAlive()) {
+            this.handlePlayerDeath();
+        }
+    }
+
+    endCombat(victory) {
+        if (victory) {
+            this.ui.print(`${this.combatTarget.name} destroyed.`, "msg-gold");
+            
+            // Rewards
+            const gold = this.combatTarget.gold;
+            const xp = this.combatTarget.xp;
+            
+            this.player.gold += gold;
+            this.ui.print(`Gained: ${gold} Gold, ${xp} XP.`, "msg-success");
+            
+            if (this.player.gainXp(xp)) {
+                this.ui.print(">>> LEVEL UP! Max HP and Damage increased. <<<", "msg-gold");
+            }
+            
+            this.combatTarget = null;
+            this.gameState = 'IDLE';
+            this.saveState();
+            this.updateAllPanels();
+        }
+    }
+
+    updateAllPanels() {
+        if (!this.player) {
+            this.ui.updateStats(null, []);
+            this.ui.updateLocationHeader("CHARACTER SELECT");
+            return;
+        }
+        this.ui.updateStats(this.player, this.zones);
+        const currentZone = this.zones.find(z => z.id === this.player.location);
+        this.ui.updateLocationHeader(currentZone ? currentZone.name : "UNKNOWN SECTOR");
+    }
+}
+
+window.onload = () => new GameCore();
+
+</script>
+</body>
+</html>
