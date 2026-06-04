@@ -1,0 +1,34 @@
+{
+  "note": "Affixes are rollable bonuses applied to items at generation or via enchanting. 'stat' targets a key on the item's bonus block. 'min'/'max' are per-item-level scaling factors (value = round(level * factor) clamped to >=flat). 'element' affixes also tag the item's damage element.",
+  "pool": [
+    { "id": "of_the_bear",      "name": "of the Bear",      "stat": "vit",       "min": 0.20, "max": 0.45, "flat": 2, "weight": 10 },
+    { "id": "of_the_wolf",      "name": "of the Wolf",      "stat": "agi",       "min": 0.20, "max": 0.45, "flat": 2, "weight": 10 },
+    { "id": "of_the_eagle",     "name": "of the Eagle",     "stat": "luck",      "min": 0.15, "max": 0.35, "flat": 1, "weight": 9 },
+    { "id": "of_the_serpent",   "name": "of the Serpent",   "stat": "agi",       "min": 0.25, "max": 0.50, "flat": 2, "weight": 7 },
+    { "id": "of_strength",      "name": "of Strength",      "stat": "str",       "min": 0.20, "max": 0.45, "flat": 2, "weight": 10 },
+    { "id": "of_intellect",     "name": "of Intellect",     "stat": "int",       "min": 0.20, "max": 0.45, "flat": 2, "weight": 10 },
+    { "id": "of_power",         "name": "of Power",         "stat": "flatDmg",   "min": 0.40, "max": 0.90, "flat": 3, "weight": 9 },
+    { "id": "of_protection",    "name": "of Protection",    "stat": "flatDef",   "min": 0.30, "max": 0.70, "flat": 2, "weight": 9 },
+    { "id": "of_fortitude",     "name": "of Fortitude",     "stat": "hp",        "min": 1.50, "max": 3.50, "flat": 10, "weight": 9 },
+    { "id": "of_striking",      "name": "of Striking",      "stat": "crit",      "min": 0.05, "max": 0.12, "flat": 1, "weight": 7, "pct": true },
+    { "id": "of_slaughter",     "name": "of Slaughter",     "stat": "critDmg",   "min": 0.10, "max": 0.25, "flat": 5, "weight": 6, "pct": true },
+    { "id": "of_deflection",    "name": "of Deflection",    "stat": "dodge",     "min": 0.04, "max": 0.10, "flat": 1, "weight": 6, "pct": true },
+    { "id": "of_the_leech",     "name": "of the Leech",     "stat": "lifesteal", "min": 0.03, "max": 0.09, "flat": 1, "weight": 4, "pct": true },
+    { "id": "of_fire",          "name": "of Fire",          "stat": "elemDmg",   "min": 0.50, "max": 1.10, "flat": 4, "weight": 6, "element": "fire" },
+    { "id": "of_ice",           "name": "of Ice",           "stat": "elemDmg",   "min": 0.50, "max": 1.10, "flat": 4, "weight": 6, "element": "ice" },
+    { "id": "of_lightning",     "name": "of Lightning",     "stat": "elemDmg",   "min": 0.50, "max": 1.10, "flat": 4, "weight": 6, "element": "lightning" },
+    { "id": "of_shadow",        "name": "of Shadow",        "stat": "elemDmg",   "min": 0.55, "max": 1.20, "flat": 4, "weight": 5, "element": "shadow" },
+    { "id": "of_light",         "name": "of Light",         "stat": "elemDmg",   "min": 0.55, "max": 1.20, "flat": 4, "weight": 5, "element": "light" },
+    { "id": "of_the_void",      "name": "of the Void",      "stat": "allStats",  "min": 0.10, "max": 0.30, "flat": 1, "weight": 2 },
+    { "id": "of_the_dragon",    "name": "of the Dragon",    "stat": "flatDmg",   "min": 0.70, "max": 1.40, "flat": 5, "weight": 2 },
+    { "id": "of_eternity",      "name": "of Eternity",      "stat": "hp",        "min": 2.50, "max": 5.00, "flat": 20, "weight": 2 }
+  ],
+  "elements": {
+    "fire":      { "name": "Fire",      "color": "#e25822", "strongVs": ["ice", "nature"],   "weakVs": ["water"] },
+    "ice":       { "name": "Ice",       "color": "#7fd4e8", "strongVs": ["nature", "fire"],  "weakVs": ["lightning"] },
+    "lightning": { "name": "Lightning", "color": "#f4d03f", "strongVs": ["water"],           "weakVs": ["earth"] },
+    "shadow":    { "name": "Shadow",    "color": "#9b59b6", "strongVs": ["light"],           "weakVs": ["light"] },
+    "light":     { "name": "Light",     "color": "#f7f3d7", "strongVs": ["shadow"],          "weakVs": ["shadow"] },
+    "physical":  { "name": "Physical",  "color": "#c2b280", "strongVs": [],                  "weakVs": [] }
+  }
+}

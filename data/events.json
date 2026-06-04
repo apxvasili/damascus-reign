@@ -1,0 +1,144 @@
+{
+  "note": "Random non-combat encounters. Each choice resolves to one weighted result whose effects are applied. Effect keys: gold, xp, hp, hpPct, essence, shards, item (rarityBias number), fight (true|monsterId), nothing. The AI layer, if enabled, rewrites 'text' fields with fresh flavor but keeps mechanics identical.",
+  "events": [
+    {
+      "id": "wandering_merchant",
+      "title": "A Wandering Merchant",
+      "weight": 10,
+      "text": "A hooded peddler steps from behind a leaning stone, his cart piled with oddments. 'Coin for curiosities?' he rasps.",
+      "choices": [
+        { "label": "Buy the wrapped bundle (40g)", "cost": { "gold": 40 }, "results": [
+          { "weight": 6, "text": "You unwrap a surprisingly fine piece of gear.", "effects": { "item": 1.5 } },
+          { "weight": 4, "text": "Inside is nothing but damp straw. Swindled.", "effects": {} }
+        ]},
+        { "label": "Buy a vial of essence (30g)", "cost": { "gold": 30 }, "results": [
+          { "weight": 10, "text": "He hands you a faintly glowing vial.", "effects": { "essence": 3 } }
+        ]},
+        { "label": "Walk away", "results": [
+          { "weight": 10, "text": "You leave the merchant to his muttering.", "effects": {} }
+        ]}
+      ]
+    },
+    {
+      "id": "ancient_shrine",
+      "title": "An Ancient Shrine",
+      "weight": 9,
+      "text": "A moss-eaten altar hums with old power. An offering bowl waits, expectant.",
+      "choices": [
+        { "label": "Offer gold (50g)", "cost": { "gold": 50 }, "results": [
+          { "weight": 5, "text": "Warmth floods your limbs. You feel stronger.", "effects": { "xp": 60, "hpPct": 1.0 } },
+          { "weight": 4, "text": "The shrine accepts your gift in silence.", "effects": { "xp": 30 } },
+          { "weight": 2, "text": "The bowl cracks. The power was already spent.", "effects": {} }
+        ]},
+        { "label": "Pray (free)", "results": [
+          { "weight": 6, "text": "A gentle light mends your wounds.", "effects": { "hpPct": 0.5 } },
+          { "weight": 4, "text": "Nothing answers your prayer.", "effects": {} }
+        ]},
+        { "label": "Pry the gemstone loose", "results": [
+          { "weight": 5, "text": "You wrench free a glittering shard!", "effects": { "shards": 4, "gold": 30 } },
+          { "weight": 5, "text": "The shrine's guardian awakens, furious!", "effects": { "fight": true } }
+        ]}
+      ]
+    },
+    {
+      "id": "wounded_traveler",
+      "title": "A Wounded Traveler",
+      "weight": 8,
+      "text": "A figure slumps against a rock, clutching a bleeding side. 'Help me... I can pay,' they whisper.",
+      "choices": [
+        { "label": "Tend their wounds", "results": [
+          { "weight": 7, "text": "Grateful, they press coins and a trinket into your hands.", "effects": { "gold": 70, "item": 0.8 } },
+          { "weight": 3, "text": "It was a trap! Bandits spring from the brush.", "effects": { "fight": true } }
+        ]},
+        { "label": "Rob them instead", "results": [
+          { "weight": 6, "text": "You take what little they have. Their eyes follow you.", "effects": { "gold": 45 } },
+          { "weight": 4, "text": "They were no easy mark. Steel flashes.", "effects": { "fight": true } }
+        ]},
+        { "label": "Leave them be", "results": [
+          { "weight": 10, "text": "You walk on. The road is cruel.", "effects": {} }
+        ]}
+      ]
+    },
+    {
+      "id": "buried_cache",
+      "title": "Disturbed Earth",
+      "weight": 8,
+      "text": "Loose soil and a corner of rotted wood hint at something buried here.",
+      "choices": [
+        { "label": "Dig it up", "results": [
+          { "weight": 5, "text": "A strongbox of old coin!", "effects": { "gold": 120 } },
+          { "weight": 4, "text": "A forgotten weapon, still keen.", "effects": { "item": 1.2 } },
+          { "weight": 3, "text": "A nest of something hungry erupts!", "effects": { "fight": true } }
+        ]},
+        { "label": "Leave it", "results": [
+          { "weight": 10, "text": "Some things are buried for a reason.", "effects": {} }
+        ]}
+      ]
+    },
+    {
+      "id": "mysterious_well",
+      "title": "A Mysterious Well",
+      "weight": 7,
+      "text": "A deep well exhales cold air. A bucket dangles on a frayed rope.",
+      "choices": [
+        { "label": "Toss in a coin and wish (10g)", "cost": { "gold": 10 }, "results": [
+          { "weight": 4, "text": "Fortune smiles — gold bubbles up from below!", "effects": { "gold": 90 } },
+          { "weight": 4, "text": "You feel oddly lucky.", "effects": { "xp": 40 } },
+          { "weight": 4, "text": "Plink. Nothing." , "effects": {} }
+        ]},
+        { "label": "Drink the water", "results": [
+          { "weight": 6, "text": "Impossibly pure. You feel restored.", "effects": { "hpPct": 0.7 } },
+          { "weight": 4, "text": "Brackish and foul. Your stomach turns.", "effects": { "hpPct": -0.15 } }
+        ]}
+      ]
+    },
+    {
+      "id": "abandoned_forge",
+      "title": "An Abandoned Forge",
+      "weight": 7,
+      "text": "A cold smithy stands open to the sky, anvil intact, scrap scattered across the floor.",
+      "choices": [
+        { "label": "Scavenge for materials", "results": [
+          { "weight": 7, "text": "You gather usable forge shards.", "effects": { "shards": 5 } },
+          { "weight": 3, "text": "Rusted junk, all of it.", "effects": { "shards": 1 } }
+        ]},
+        { "label": "Search the back room", "results": [
+          { "weight": 5, "text": "A smith's old work, abandoned mid-temper.", "effects": { "item": 1.0, "shards": 2 } },
+          { "weight": 5, "text": "Squatters. They don't take kindly to guests.", "effects": { "fight": true } }
+        ]}
+      ]
+    },
+    {
+      "id": "gambler_ghost",
+      "title": "The Gambler's Ghost",
+      "weight": 6,
+      "minLevel": 5,
+      "text": "A translucent figure rattles spectral dice. 'One throw, mortal. Double your purse, or lose half. Care to play?'",
+      "choices": [
+        { "label": "Roll the bones", "results": [
+          { "weight": 5, "text": "The dice land high. Your coin doubles!", "effects": { "goldMult": 2.0 } },
+          { "weight": 5, "text": "Snake eyes. Half your gold dissolves into mist.", "effects": { "goldMult": 0.5 } }
+        ]},
+        { "label": "Decline", "results": [
+          { "weight": 10, "text": "The ghost shrugs and fades.", "effects": {} }
+        ]}
+      ]
+    },
+    {
+      "id": "crossroads_choice",
+      "title": "A Forked Path",
+      "weight": 6,
+      "text": "The trail splits. One way is overgrown and dark; the other, open and worn smooth by traffic.",
+      "choices": [
+        { "label": "Take the dark path", "results": [
+          { "weight": 5, "text": "Risk rewarded — a hidden trove!", "effects": { "item": 1.6, "gold": 40 } },
+          { "weight": 5, "text": "Something was waiting in the dark.", "effects": { "fight": true } }
+        ]},
+        { "label": "Take the safe path", "results": [
+          { "weight": 8, "text": "An uneventful but restful walk.", "effects": { "hpPct": 0.3 } },
+          { "weight": 2, "text": "You find a few dropped coins on the road.", "effects": { "gold": 25 } }
+        ]}
+      ]
+    }
+  ]
+}

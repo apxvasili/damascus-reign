@@ -1,0 +1,32 @@
+{
+  "note": "Forging enhances an item's enhancement level (+N). Each level multiplies the item's primary/affix stats by (1 + perLevelBonus*N). Success chance falls as N rises; on failure the materials are consumed and, past safeLevel, the item may drop a level. Costs scale with item level.",
+  "perLevelBonus": 0.10,
+  "maxLevel": 15,
+  "safeLevel": 5,
+  "baseGoldCost": 30,
+  "goldPerItemLevel": 6,
+  "tiers": [
+    { "from": 0,  "shards": 1,  "success": 1.00, "downgradeOnFail": false },
+    { "from": 1,  "shards": 1,  "success": 1.00, "downgradeOnFail": false },
+    { "from": 2,  "shards": 2,  "success": 0.95, "downgradeOnFail": false },
+    { "from": 3,  "shards": 2,  "success": 0.90, "downgradeOnFail": false },
+    { "from": 4,  "shards": 3,  "success": 0.80, "downgradeOnFail": false },
+    { "from": 5,  "shards": 3,  "success": 0.70, "downgradeOnFail": true  },
+    { "from": 6,  "shards": 4,  "success": 0.60, "downgradeOnFail": true  },
+    { "from": 7,  "shards": 5,  "success": 0.50, "downgradeOnFail": true  },
+    { "from": 8,  "shards": 6,  "success": 0.42, "downgradeOnFail": true  },
+    { "from": 9,  "shards": 7,  "success": 0.35, "downgradeOnFail": true  },
+    { "from": 10, "shards": 9,  "success": 0.28, "downgradeOnFail": true  },
+    { "from": 11, "shards": 11, "success": 0.22, "downgradeOnFail": true  },
+    { "from": 12, "shards": 14, "success": 0.16, "downgradeOnFail": true  },
+    { "from": 13, "shards": 18, "success": 0.11, "downgradeOnFail": true  },
+    { "from": 14, "shards": 24, "success": 0.07, "downgradeOnFail": true  }
+  ],
+  "enchant": {
+    "note": "Enchanting rolls a new random affix onto an item, replacing the weakest existing affix if the item is already at its rarity's affix cap.",
+    "essenceCost": 2,
+    "goldCost": 40,
+    "goldPerItemLevel": 4,
+    "rerollEssenceCost": 4
+  }
+}
