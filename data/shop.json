@@ -1,0 +1,15 @@
+{
+  "note": "Static shop stock sold in town. Consumables stack in inventory. The shop also buys player loot at the item's computed sell value. 'rotatingStock' items are regenerated each visit as procedural gear.",
+  "consumables": [
+    { "id": "bread",        "name": "Stale Bread",     "cost": 8,   "type": "consumable", "effect": { "heal": 25 },    "desc": "Hard as a rock, but it fills the belly." },
+    { "id": "potion",       "name": "Herbal Brew",     "cost": 35,  "type": "consumable", "effect": { "heal": 90 },    "desc": "Smells of bog, mends wounds." },
+    { "id": "elixir",       "name": "Crimson Elixir",  "cost": 110, "type": "consumable", "effect": { "healPct": 0.6 },"desc": "Restores 60% of max health." },
+    { "id": "draught",      "name": "Sovereign Draught","cost": 260,"type": "consumable", "effect": { "healPct": 1.0 },"desc": "Full restoration in a single gulp." },
+    { "id": "whetstone",    "name": "Whetstone",       "cost": 50,  "type": "consumable", "effect": { "resource": 50 },"desc": "Sharpen up — restores class resource." }
+  ],
+  "materials": [
+    { "id": "shard",  "name": "Forge Shard",  "cost": 40,  "type": "material", "key": "shards",   "desc": "Fuel for the forge. Spent on enhancements." },
+    { "id": "essence","name": "Arcane Essence","cost": 60, "type": "material", "key": "essence",  "desc": "Volatile residue used to enchant gear." }
+  ],
+  "rotatingStockCount": 4
+}

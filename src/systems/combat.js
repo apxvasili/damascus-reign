@@ -1,0 +1,282 @@
+/**
+ * COMBAT — turn-based duels. A CombatSession owns one enemy and resolves a
+ * single exchange per player action (player acts, enemy retaliates). It writes
+ * to a `log(text, cls)` callback and calls `onEnd(outcome)` when the fight
+ * resolves. All math runs through the injected RNG.
+ *
+ * Elements, crits, dodge, lifesteal and a few status effects (burn / chill /
+ * shock) make each weapon roll feel distinct.
+ */
+
+const ZONE_ELEMENT = [
+  [/scorch|blackrock|hellfire|magma|flame|ember/, "fire"],
+  [/frozen|frost|ice|northrend|icecrown|rime/, "ice"],
+  [/dragonblight/, "ice"],
+  [/haunted|shadowfen|abyssal|sunken|outland|draenor/, "shadow"],
+  [/silithus|crystal/, "lightning"],
+  [/pandaria|vale/, "light"],
+];
+
+function zoneElement(zone) {
+  const hay = `${zone.id} ${zone.name}`.toLowerCase();
+  for (const [re, el] of ZONE_ELEMENT) if (re.test(hay)) return el;
+  return "physical";
+}
+
+function mitigation(def) {
+  return def / (def + 60);
+}
+
+/** Build a scaled enemy instance for a zone. */
+export function makeEnemy(data, rng, zone, { boss = false } = {}) {
+  const pool = zone.monsters ?? [];
+  // Boss fights prefer entries flagged boss/special; otherwise any monster.
+  let candidates = pool
+    .map((id) => ({ id, def: data.monsters[id] }))
+    .filter((m) => m.def);
+  if (boss) {
+    const bosses = candidates.filter((m) => m.def.boss);
+    if (bosses.length) candidates = bosses;
+  } else {
+    candidates = candidates.filter((m) => !m.def.boss) ;
+    if (!candidates.length) candidates = pool.map((id) => ({ id, def: data.monsters[id] })).filter((m) => m.def);
+  }
+  const chosen = rng.pick(candidates);
+  const base = chosen.def;
+
+  const level = Math.max(1, zone.min_level + rng.range(0, 3));
+  const lvlFactor = 1 + (level - zone.min_level) * 0.08;
+  const eliteFactor = base.boss ? 1.0 : base.special ? 1.0 : 1.0;
+
+  const maxHp = Math.round(base.health * lvlFactor * eliteFactor);
+  const attack = Math.round(base.damage * lvlFactor);
+  const defense = Math.round((base.defense ?? 0) * lvlFactor);
+  const element = base.boss || base.special ? zoneElement(zone) : (rng.chance(0.35) ? zoneElement(zone) : "physical");
+
+  const xp = Math.round((maxHp * 0.35 + attack * 2.2 + defense * 1.5) * (base.boss ? 2.2 : base.special ? 1.5 : 1));
+  const gold = Math.round(xp * rng.between(0.3, 0.7));
+
+  return {
+    id: chosen.id,
+    name: base.name,
+    level,
+    maxHp,
+    hp: maxHp,
+    attack,
+    defense,
+    element,
+    xp,
+    gold,
+    boss: !!base.boss,
+    special: !!base.special,
+    statuses: {},
+  };
+}
+
+export class CombatSession {
+  constructor({ player, enemy, data, rng, log, onEnd }) {
+    this.player = player;
+    this.enemy = enemy;
+    this.data = data;
+    this.rng = rng;
+    this.log = log;
+    this.onEnd = onEnd;
+    this.over = false;
+    this.turn = 0;
+  }
+
+  elements() {
+    return this.data.affixes.elements;
+  }
+
+  effectiveness(attackerEl, defenderEl) {
+    if (attackerEl === "physical") return 1;
+    const el = this.elements()[attackerEl];
+    if (!el) return 1;
+    if (el.strongVs.includes(defenderEl)) return 1.3;
+    if (el.weakVs.includes(defenderEl)) return 0.75;
+    return 1;
+  }
+
+  // --- player actions ---
+
+  playerAttack() {
+    if (this.over) return;
+    this.turn++;
+    const p = this.player;
+    const roll = this.rng.damageRoll(p.attackPower, {
+      variance: 0.18,
+      critChance: p.critChance,
+      critMult: p.critMult,
+    });
+    let dmg = roll.value + p.elemDmg;
+    const effMult = p.element !== "physical" ? this.effectiveness(p.element, this.enemy.element) : 1;
+    dmg = Math.round(dmg * effMult);
+    this._dealToEnemy(dmg, { crit: roll.crit, effMult, element: p.element, label: "You strike" });
+    if (!this.over) this._enemyTurn();
+  }
+
+  playerAbility() {
+    if (this.over) return;
+    const p = this.player;
+    const ab = p.classDef.ability;
+    if (p.resource < ab.cost) {
+      this.log(`Not enough ${p.resourceName} (${p.resource}/${ab.cost}).`, "error");
+      return;
+    }
+    this.turn++;
+    p.resource -= ab.cost;
+
+    if (ab.kind === "attack") {
+      const base = p.attackPower * ab.mult;
+      let crit = false;
+      let value;
+      if (ab.guaranteedCrit) {
+        crit = true;
+        value = Math.round(base * (p.critMult + (ab.critBonus ?? 0)));
+      } else {
+        value = Math.round(base);
+      }
+      let dmg = value + p.elemDmg;
+      const effMult = p.element !== "physical" ? this.effectiveness(p.element, this.enemy.element) : 1;
+      dmg = Math.round(dmg * effMult);
+      this.log(`✦ ${ab.name}!`, "ability");
+      this._dealToEnemy(dmg, { crit, effMult, element: p.element, label: "It lands" });
+    } else if (ab.kind === "spell") {
+      const scaleVal = p.attrs[ab.scale] ?? 0;
+      const raw = Math.round(scaleVal * ab.mult + p.elemDmg);
+      const effMult = this.effectiveness(ab.element, this.enemy.element);
+      const dmg = Math.round(raw * effMult);
+      this.log(`✦ ${ab.name}!`, "ability");
+      // Spells ignore enemy defense.
+      this._dealToEnemy(dmg, { crit: false, effMult, element: ab.element, label: "Arcane force tears in", ignoreDef: true });
+    } else if (ab.kind === "heal") {
+      const healed = Math.round(p.maxHp * ab.healPct);
+      p.heal(healed);
+      this.log(`✦ ${ab.name}! You recover ${healed} HP.`, "heal");
+      const scaleVal = p.attrs[ab.scale] ?? 0;
+      const raw = Math.round(scaleVal * ab.mult);
+      const effMult = this.effectiveness(ab.element, this.enemy.element);
+      this._dealToEnemy(Math.round(raw * effMult), { crit: false, effMult, element: ab.element, label: "Holy light smites", ignoreDef: true });
+    }
+    if (!this.over) this._enemyTurn();
+  }
+
+  useConsumable(item) {
+    if (this.over) return;
+    const eff = item.effect ?? {};
+    if (eff.heal) { this.player.heal(eff.heal); this.log(`You use ${item.name}, recovering ${eff.heal} HP.`, "heal"); }
+    if (eff.healPct) { const amt = Math.round(this.player.maxHp * eff.healPct); this.player.heal(amt); this.log(`You use ${item.name}, recovering ${amt} HP.`, "heal"); }
+    if (eff.resource) { this.player.restoreResource(eff.resource); this.log(`You use ${item.name}, restoring ${eff.resource} ${this.player.resourceName}.`, "heal"); }
+    this.player.removeItem(item.uid);
+    this._enemyTurn();
+  }
+
+  flee() {
+    if (this.over) return;
+    const chance = 0.45 + this.player.attrs.agi * 0.01 - this.enemy.level * 0.01;
+    if (this.enemy.boss) {
+      this.log("There is no fleeing this. The boss blocks your escape!", "error");
+      this._enemyTurn();
+      return;
+    }
+    if (this.rng.chance(Math.max(0.15, Math.min(0.9, chance)))) {
+      this.log("You break away and escape.", "system");
+      this._finish("fled");
+    } else {
+      this.log("Your escape fails!", "error");
+      this._enemyTurn();
+    }
+  }
+
+  // --- internals ---
+
+  _dealToEnemy(rawDmg, { crit, effMult, element, label, ignoreDef = false }) {
+    let dmg = rawDmg;
+    if (!ignoreDef) dmg = Math.max(1, Math.round(dmg * (1 - mitigation(this.enemy.defense))));
+    dmg = Math.max(1, dmg);
+    this.enemy.hp -= dmg;
+
+    const critTxt = crit ? " <b>CRIT!</b>" : "";
+    const effTxt = effMult > 1 ? " <i>(super effective)</i>" : effMult < 1 ? " <i>(resisted)</i>" : "";
+    this.log(`${label} ${this.enemy.name} for <b>${dmg}</b> damage.${critTxt}${effTxt}`, "combat");
+
+    // lifesteal
+    if (this.player.lifesteal > 0) {
+      const back = Math.max(1, Math.round(dmg * this.player.lifesteal));
+      this.player.heal(back);
+      this.log(`You drain ${back} HP.`, "heal");
+    }
+    // elemental status application
+    this._applyStatus(element, dmg);
+
+    if (this.enemy.hp <= 0) {
+      this.enemy.hp = 0;
+      this.log(`${this.enemy.name} is slain!`, "gold");
+      this._finish("victory");
+    }
+  }
+
+  _applyStatus(element, dmg) {
+    const s = this.enemy.statuses;
+    if (element === "fire" && this.rng.chance(0.5)) {
+      s.burn = { turns: 3, dmg: Math.max(2, Math.round(dmg * 0.2)) };
+      this.log(`${this.enemy.name} is set ablaze!`, "system");
+    } else if (element === "ice" && this.rng.chance(0.5)) {
+      s.chill = { turns: 2 };
+      this.log(`${this.enemy.name} is chilled, its blows weakened.`, "system");
+    } else if (element === "lightning" && this.rng.chance(0.35)) {
+      s.shock = { turns: 2 };
+      this.log(`${this.enemy.name} is shocked and may seize up!`, "system");
+    } else if (element === "shadow" && this.rng.chance(0.4)) {
+      this.enemy.defense = Math.max(0, Math.round(this.enemy.defense * 0.85));
+      this.log(`Shadow withers ${this.enemy.name}'s guard.`, "system");
+    }
+  }
+
+  _enemyTurn() {
+    if (this.over) return;
+    const e = this.enemy;
+    const s = e.statuses;
+
+    // burn DoT
+    if (s.burn) {
+      e.hp -= s.burn.dmg;
+      this.log(`${e.name} burns for ${s.burn.dmg}.`, "system");
+      if (--s.burn.turns <= 0) delete s.burn;
+      if (e.hp <= 0) { e.hp = 0; this.log(`${e.name} succumbs to its burns!`, "gold"); return this._finish("victory"); }
+    }
+
+    // shock stun
+    if (s.shock) {
+      const stunned = this.rng.chance(0.4);
+      if (--s.shock.turns <= 0) delete s.shock;
+      if (stunned) { this.log(`${e.name} is stunned and cannot act!`, "system"); return; }
+    }
+
+    // dodge
+    if (this.rng.chance(this.player.dodge)) {
+      this.log(`You dodge ${e.name}'s attack!`, "success");
+    } else {
+      let atk = e.attack;
+      if (s.chill) { atk = Math.round(atk * 0.75); if (--s.chill.turns <= 0) delete s.chill; }
+      const roll = this.rng.damageRoll(atk, { variance: 0.15, critChance: 0.05, critMult: 1.5 });
+      let dmg = roll.value;
+      if (e.element !== "physical") dmg = Math.round(dmg * 1.0); // enemies don't get matchup bonus vs player for simplicity
+      dmg = Math.max(1, Math.round(dmg * (1 - mitigation(this.player.defense))));
+      this.player.hp -= dmg;
+      const critTxt = roll.crit ? " <b>CRIT!</b>" : "";
+      this.log(`${e.name} hits you for <b>${dmg}</b>.${critTxt}`, "enemy");
+      if (!this.player.isAlive()) { this.player.hp = 0; return this._finish("defeat"); }
+    }
+
+    // small resource regen per turn
+    this.player.restoreResource(8);
+  }
+
+  _finish(outcome) {
+    if (this.over) return;
+    this.over = true;
+    this.onEnd?.(outcome, this.enemy);
+  }
+}

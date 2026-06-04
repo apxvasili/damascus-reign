@@ -1,0 +1,35 @@
+{
+  "note": "Drives procedural item generation. Rarities are weighted; weight is multiplied by zone/luck modifiers at roll time. mult scales raw stats; affixes = number of rolled bonus affixes.",
+  "rarities": [
+    { "tier": "F",   "label": "Junk",      "color": "#6b6b6b", "weight": 280, "mult": 0.55, "affixes": 0 },
+    { "tier": "E",   "label": "Crude",     "color": "#9d9d9d", "weight": 220, "mult": 0.80, "affixes": 0 },
+    { "tier": "D",   "label": "Common",    "color": "#ffffff", "weight": 170, "mult": 1.00, "affixes": 1 },
+    { "tier": "C",   "label": "Uncommon",  "color": "#3ecf6b", "weight": 110, "mult": 1.35, "affixes": 1 },
+    { "tier": "B",   "label": "Rare",      "color": "#4aa3ff", "weight": 60,  "mult": 1.80, "affixes": 2 },
+    { "tier": "A",   "label": "Epic",      "color": "#b06bff", "weight": 28,  "mult": 2.50, "affixes": 2 },
+    { "tier": "S",   "label": "Legendary", "color": "#ff9b3d", "weight": 11,  "mult": 3.50, "affixes": 3 },
+    { "tier": "SS",  "label": "Mythic",    "color": "#ff4d4d", "weight": 4,   "mult": 5.00, "affixes": 3 },
+    { "tier": "SSS", "label": "Relic",     "color": "#ffe14d", "weight": 1.2, "mult": 7.50, "affixes": 4 },
+    { "tier": "X",   "label": "Anomaly",   "color": "#43f7e6", "weight": 0.25,"mult": 11.0, "affixes": 4 }
+  ],
+  "slots": {
+    "weapon":   { "label": "Weapon",   "primary": "dmg", "base": 6, "perLevel": 1.7 },
+    "offhand":  { "label": "Off-Hand", "primary": "def", "base": 3, "perLevel": 0.8 },
+    "hat":      { "label": "Head",     "primary": "def", "base": 2, "perLevel": 0.7 },
+    "armor":    { "label": "Chest",    "primary": "def", "base": 4, "perLevel": 1.1 },
+    "pants":    { "label": "Legs",     "primary": "def", "base": 3, "perLevel": 0.9 },
+    "gloves":   { "label": "Hands",    "primary": "def", "base": 2, "perLevel": 0.6 },
+    "boots":    { "label": "Feet",     "primary": "def", "base": 2, "perLevel": 0.6 },
+    "necklace": { "label": "Neck",     "primary": "none","base": 0, "perLevel": 0.0 },
+    "ring":     { "label": "Ring",     "primary": "none","base": 0, "perLevel": 0.0 }
+  },
+  "slotWeights": {
+    "weapon": 16, "armor": 14, "pants": 12, "hat": 12, "gloves": 12, "boots": 12, "offhand": 8, "necklace": 6, "ring": 6
+  },
+  "classWeaponBias": {
+    "warrior": ["Sword", "Greatsword", "Battleaxe", "Warhammer", "Mace", "Maul", "Longsword", "Broadsword", "Claymore", "Halberd"],
+    "mage":    ["Staff", "Wand", "Rod", "Scepter", "Quarterstaff", "Cane", "Tome", "Grimoire"],
+    "rogue":   ["Dagger", "Dirk", "Stiletto", "Kris", "Shortsword", "Rapier", "Kukri", "Tanto", "Main Gauche", "Cutlass"],
+    "cleric":  ["Mace", "Hammer", "Warhammer", "Flail", "Morning Star", "Scepter", "Quarterstaff", "Flanged Mace"]
+  }
+}

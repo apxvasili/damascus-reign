@@ -1,0 +1,85 @@
+{
+  "warrior": {
+    "id": "warrior",
+    "name": "Warrior",
+    "blurb": "A bulwark of muscle and steel. Outlasts anything that bleeds.",
+    "base": { "str": 8, "agi": 4, "int": 2, "vit": 9, "luck": 3 },
+    "growth": { "str": 3, "agi": 1, "int": 0, "vit": 4, "luck": 1 },
+    "hpPerVit": 12,
+    "start": { "weapon": "warrior", "armor": "warrior" },
+    "ability": {
+      "id": "rampage",
+      "name": "Rampage",
+      "desc": "A reckless flurry dealing 220% weapon damage. Cannot crit, never misses.",
+      "cost": 25,
+      "kind": "attack",
+      "mult": 2.2
+    },
+    "resourceName": "Rage",
+    "resourceMax": 100
+  },
+  "mage": {
+    "id": "mage",
+    "name": "Mage",
+    "blurb": "Glass and fire. Ends fights before they start, or dies trying.",
+    "base": { "str": 2, "agi": 4, "int": 10, "vit": 4, "luck": 5 },
+    "growth": { "str": 0, "agi": 1, "int": 4, "vit": 2, "luck": 2 },
+    "hpPerVit": 8,
+    "start": { "weapon": "mage", "armor": "mage" },
+    "ability": {
+      "id": "arcane_nova",
+      "name": "Arcane Nova",
+      "desc": "Unleashes raw arcane force for 180% of INT as fire damage, ignoring defense.",
+      "cost": 30,
+      "kind": "spell",
+      "element": "fire",
+      "scale": "int",
+      "mult": 1.8
+    },
+    "resourceName": "Mana",
+    "resourceMax": 100
+  },
+  "rogue": {
+    "id": "rogue",
+    "name": "Rogue",
+    "blurb": "A blade in the dark. Strikes vital points and vanishes.",
+    "base": { "str": 5, "agi": 10, "int": 3, "vit": 5, "luck": 7 },
+    "growth": { "str": 1, "agi": 4, "int": 1, "vit": 2, "luck": 3 },
+    "hpPerVit": 9,
+    "start": { "weapon": "rogue", "armor": "rogue" },
+    "ability": {
+      "id": "eviscerate",
+      "name": "Eviscerate",
+      "desc": "A guaranteed critical strike for 160% weapon damage with tripled crit damage.",
+      "cost": 20,
+      "kind": "attack",
+      "mult": 1.6,
+      "guaranteedCrit": true,
+      "critBonus": 1.0
+    },
+    "resourceName": "Energy",
+    "resourceMax": 100
+  },
+  "cleric": {
+    "id": "cleric",
+    "name": "Cleric",
+    "blurb": "Faith made armor. Mends wounds and smites the wicked.",
+    "base": { "str": 5, "agi": 3, "int": 7, "vit": 7, "luck": 4 },
+    "growth": { "str": 2, "agi": 1, "int": 3, "vit": 3, "luck": 2 },
+    "hpPerVit": 10,
+    "start": { "weapon": "cleric", "armor": "cleric" },
+    "ability": {
+      "id": "lay_on_hands",
+      "name": "Lay on Hands",
+      "desc": "Channels holy light, restoring 40% of max HP and smiting the foe for 120% of INT as light damage.",
+      "cost": 35,
+      "kind": "heal",
+      "element": "light",
+      "scale": "int",
+      "mult": 1.2,
+      "healPct": 0.4
+    },
+    "resourceName": "Faith",
+    "resourceMax": 100
+  }
+}

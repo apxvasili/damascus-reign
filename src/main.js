@@ -1,0 +1,620 @@
+/**
+ * DAMASCUS REIGN — game orchestrator.
+ *
+ * Owns the state machine (MENU → IDLE → COMBAT / ENCOUNTER / BUSY), wires every
+ * command to its system, and routes combat/encounter resolution. Systems stay
+ * pure-ish; this file is the glue and the place state transitions happen.
+ */
+import { RNG } from "./engine/rng.js";
+import { loadGameData } from "./engine/data.js";
+import { CommandRegistry } from "./engine/commands.js";
+import { Player, SLOTS } from "./engine/state.js";
+import { Terminal } from "./ui/terminal.js";
+import { Panels } from "./ui/panels.js";
+import { itemLine, itemDetail, itemNameHtml, esc } from "./ui/render.js";
+import { listClasses, getClass, grantStartingKit } from "./systems/classes.js";
+import { displayName, generateItem, itemPower, sellValue } from "./systems/items.js";
+import { CombatSession, makeEnemy } from "./systems/combat.js";
+import { forge, forgeInfo } from "./systems/forge.js";
+import { enchant, enchantInfo } from "./systems/enchant.js";
+import { rollStock, buy, sell } from "./systems/shop.js";
+import { rollEvent, resolveChoice, narrationPrompt } from "./systems/encounters.js";
+import { SaveManager } from "./systems/save.js";
+import { AINarrator, PROVIDERS } from "./systems/ai.js";
+
+const STATE = { MENU: "MENU", IDLE: "IDLE", COMBAT: "COMBAT", ENCOUNTER: "ENCOUNTER", BUSY: "BUSY" };
+
+const TITLE_ART = String.raw`
+ ▓█████▄  ▄▄▄       ███▄ ▄███▓ ▄▄▄        ██████  ▄████▄   █    ██   ██████
+ ▒██▀ ██▌▒████▄    ▓██▒▀█▀ ██▒▒████▄    ▒██    ▒ ▒██▀ ▀█   ██  ▓██▒▒██    ▒
+ ░██   █▌▒██  ▀█▄  ▓██    ▓██░▒██  ▀█▄  ░ ▓██▄   ▒▓█    ▄ ▓██  ▒██░░ ▓██▄
+ ░▓█▄   ▌░██▄▄▄▄██ ▒██    ▒██ ░██▄▄▄▄██   ▒   ██▒▒▓▓▄ ▄██▒▓▓█  ░██░  ▒   ██▒
+ ░▒████▓  ▓█   ▓██▒▒██▒   ░██▒ ▓█   ▓██▒▒██████▒▒▒ ▓███▀ ░▒▒█████▓ ▒██████▒▒
+  ▒▒▓  ▒  ▒▒   ▓▒█░░ ▒░   ░  ░ ▒▒   ▓▒█░▒ ▒▓▒ ▒ ░░ ░▒ ▒  ░░▒▓▒ ▒ ▒ ▒ ▒▓▒ ▒ ░
+              R E I G N   O F   I R O N   A N D   D U S T`;
+
+class Game {
+  constructor() {
+    this.term = new Terminal();
+    this.panels = new Panels();
+    this.registry = new CommandRegistry();
+    this.rng = new RNG();
+    this.ai = new AINarrator();
+    this.state = STATE.MENU;
+    this.player = null;
+    this.combat = null;
+    this.encounter = null;
+    this.shopStock = null;
+  }
+
+  log(msg, cls) { return this.term.print(msg, cls); }
+
+  // ---- ctx interface used by the registry ----
+  getState() { return this.state; }
+  stateHint(def, state) {
+    if (state === STATE.MENU) return `You must load or create a character first. Try "help".`;
+    if (state === STATE.COMBAT) return `You're in combat! Valid: attack, ability, use <n>, flee.`;
+    if (state === STATE.ENCOUNTER) return `Resolve the encounter first — pick a number (e.g. "1").`;
+    if (state === STATE.BUSY) return `You're occupied right now…`;
+    return `That command isn't available right now.`;
+  }
+
+  async boot() {
+    this.term.bind((line) => this.handleInput(line));
+    this.term.art(TITLE_ART);
+    this.log("Loading the realm…", "system");
+    try {
+      this.data = await loadGameData();
+    } catch (err) {
+      this.log(`FATAL: could not load game data. ${esc(err.message)}`, "error");
+      this.log(`This game must be served over HTTP. From the project folder run:`, "system");
+      this.log(`<b>python3 -m http.server 8080</b> &nbsp;then open&nbsp; <b>http://localhost:8080</b>`, "system");
+      return;
+    }
+    this.save = new SaveManager(this.data);
+    this.registerCommands();
+    this.panels.renderCodex(this.registry.grouped());
+    this.refresh();
+    this.showMenu();
+    this.term.focus();
+  }
+
+  handleInput(line) {
+    this.term.echo(line);
+    const res = this.registry.dispatch(line, this);
+    if (!res.ok && res.error) this.log(res.error, "error");
+    this.refresh();
+  }
+
+  refresh() {
+    const enemy = this.state === STATE.COMBAT ? this.combat?.enemy : null;
+    const zone = this.player ? this.zoneOf(this.player.location) : null;
+    this.panels.update(this.player, this.data, { enemy, zone });
+    if (!this.player) { this.panels.setHeader("CHARACTER SELECT"); this.term.setPrompt("Reign:>"); return; }
+    if (this.state === STATE.COMBAT) this.panels.setHeader(`COMBAT — ${this.combat.enemy.name}`, true);
+    else if (this.state === STATE.ENCOUNTER) this.panels.setHeader(this.encounter.event.title.toUpperCase());
+    else this.panels.setHeader(zone ? zone.name : "THE WILDS");
+    this.term.setPrompt(`${this.player.name}:>`);
+  }
+
+  zoneOf(id) { return this.data.zones.find((z) => z.id === id); }
+
+  // =================== COMMAND REGISTRATION ===================
+  registerCommands() {
+    const r = this.registry;
+
+    // --- character / menu ---
+    r.register({ name: "new", usage: "new <class> <name>", desc: "Create a character.", group: "Character", states: [STATE.MENU], run: (a) => this.cmdNew(a) });
+    r.register({ name: "load", usage: "load <name>", desc: "Load a saved character.", group: "Character", states: [STATE.MENU], run: (a) => this.cmdLoad(a) });
+    r.register({ name: "delete", usage: "delete <name>", desc: "Delete a save.", group: "Character", states: [STATE.MENU], run: (a) => this.cmdDelete(a) });
+    r.register({ name: "saves", desc: "List saved characters.", group: "Character", states: [STATE.MENU], run: () => this.showMenu() });
+    r.register({ name: "classes", desc: "Show available classes.", group: "Character", run: () => this.cmdClasses() });
+
+    // --- exploration ---
+    r.register({ name: "look", aliases: ["l"], desc: "Describe your surroundings.", group: "World", states: [STATE.IDLE], run: () => this.cmdLook() });
+    r.register({ name: "zones", aliases: ["map"], desc: "List all zones.", group: "World", states: [STATE.IDLE], run: () => this.cmdZones() });
+    r.register({ name: "travel", usage: "travel <zone>", aliases: ["go"], desc: "Travel to a zone.", group: "World", states: [STATE.IDLE], run: (a) => this.cmdTravel(a) });
+    r.register({ name: "hunt", aliases: ["h"], desc: "Seek danger — fight or fate.", group: "World", states: [STATE.IDLE], run: () => this.cmdHunt() });
+    r.register({ name: "rest", desc: "Recover HP over time.", group: "World", states: [STATE.IDLE], run: () => this.cmdRest() });
+
+    // --- items ---
+    r.register({ name: "inventory", aliases: ["inv", "i", "bag"], desc: "List your belongings.", group: "Items", states: [STATE.IDLE], run: () => this.cmdInventory() });
+    r.register({ name: "gear", aliases: ["equipped"], desc: "Show equipped gear.", group: "Items", states: [STATE.IDLE], run: () => this.cmdGear() });
+    r.register({ name: "inspect", usage: "inspect <n|slot>", aliases: ["look-at"], desc: "Examine an item.", group: "Items", states: [STATE.IDLE], run: (a) => this.cmdInspect(a) });
+    r.register({ name: "equip", usage: "equip <n>", aliases: ["wear", "wield"], desc: "Equip an item.", group: "Items", states: [STATE.IDLE], run: (a) => this.cmdEquip(a) });
+    r.register({ name: "unequip", usage: "unequip <slot>", aliases: ["remove"], desc: "Unequip a slot.", group: "Items", states: [STATE.IDLE], run: (a) => this.cmdUnequip(a) });
+    r.register({ name: "drop", usage: "drop <n>", desc: "Discard an item.", group: "Items", states: [STATE.IDLE], run: (a) => this.cmdDrop(a) });
+
+    // --- crafting & economy ---
+    r.register({ name: "forge", usage: "forge <n|slot>", desc: "Enhance an item (+N).", group: "Forge", states: [STATE.IDLE], run: (a) => this.cmdForge(a) });
+    r.register({ name: "enchant", usage: "enchant <n|slot>", desc: "Roll an affix onto an item.", group: "Forge", states: [STATE.IDLE], run: (a) => this.cmdEnchant(a) });
+    r.register({ name: "shop", aliases: ["market"], desc: "Browse the market.", group: "Market", states: [STATE.IDLE], run: () => this.cmdShop() });
+    r.register({ name: "buy", usage: "buy <n>", desc: "Buy from the market.", group: "Market", states: [STATE.IDLE], run: (a) => this.cmdBuy(a) });
+    r.register({ name: "sell", usage: "sell <n>", desc: "Sell an item from your bag.", group: "Market", states: [STATE.IDLE], run: (a) => this.cmdSell(a) });
+
+    // --- combat ---
+    r.register({ name: "attack", aliases: ["a"], desc: "Strike the enemy.", group: "Combat", states: [STATE.COMBAT], run: () => this.cmdAttack() });
+    r.register({ name: "ability", aliases: ["skill", "cast"], desc: "Use your class ability.", group: "Combat", states: [STATE.COMBAT], run: () => this.cmdAbility() });
+    r.register({ name: "flee", aliases: ["run"], desc: "Attempt to escape.", group: "Combat", states: [STATE.COMBAT], run: () => this.cmdFlee() });
+
+    // use works in both field and combat
+    r.register({ name: "use", usage: "use <n>", desc: "Use a consumable.", group: "Items", states: [STATE.IDLE, STATE.COMBAT], run: (a) => this.cmdUse(a) });
+
+    // --- encounter ---
+    r.register({ name: "choose", usage: "choose <n>", aliases: ["1", "2", "3", "4", "pick"], desc: "Pick an encounter option.", group: "Encounter", states: [STATE.ENCOUNTER], run: (a, ctx, raw) => this.cmdChoose(a, raw) });
+
+    // --- system ---
+    r.register({ name: "status", aliases: ["stats", "char"], desc: "Show your character sheet.", group: "System", run: () => this.cmdStatus() });
+    r.register({ name: "help", aliases: ["?", "commands"], desc: "Show command help.", group: "System", run: () => this.cmdHelp() });
+    r.register({ name: "clear", aliases: ["cls"], desc: "Clear the screen.", group: "System", run: () => this.term.clear() });
+    r.register({ name: "save", desc: "Save your progress.", group: "System", states: [STATE.IDLE], run: () => this.cmdSave() });
+    r.register({ name: "ai", usage: "ai <provider> <key> [model] | ai off | ai status", desc: "Configure the optional AI narrator.", group: "System", run: (a) => this.cmdAI(a) });
+  }
+
+  // =================== CHARACTER ===================
+  showMenu() {
+    this.state = STATE.MENU;
+    this.player = null;
+    this.term.rule("THE CHRONICLES");
+    const names = this.save.names();
+    if (names.length) {
+      this.log("Saved characters:", "gold");
+      for (const n of names) {
+        const s = this.save.summary(n);
+        this.log(`  • <b>${esc(n)}</b> — Lvl ${s.level} ${s.className} <span class="cmd-desc">(${s.kills} kills)</span>`);
+      }
+      this.log(`Type <b>load &lt;name&gt;</b> to continue, or <b>new &lt;class&gt; &lt;name&gt;</b> to begin.`, "system");
+    } else {
+      this.log("No chronicles yet. Begin one with <b>new &lt;class&gt; &lt;name&gt;</b>.", "system");
+      this.log(`See your options with <b>classes</b>.`, "system");
+    }
+    this.refresh();
+  }
+
+  cmdClasses() {
+    this.term.rule("CLASSES");
+    for (const c of listClasses(this.data)) {
+      this.log(`<b style="color:var(--highlight)">${c.name}</b> — ${esc(c.blurb)}`, "");
+      this.log(`  STR ${c.base.str} · AGI ${c.base.agi} · INT ${c.base.int} · VIT ${c.base.vit} · LUCK ${c.base.luck} · ${c.resourceName}`, "cmd-desc-line");
+      this.log(`  Ability — <b>${c.ability.name}</b>: ${esc(c.ability.desc)}`, "cmd-desc-line");
+    }
+  }
+
+  cmdNew(args) {
+    const parts = args.split(/\s+/).filter(Boolean);
+    if (parts.length < 2) return this.log(`Usage: new <class> <name>. Classes: ${listClasses(this.data).map((c) => c.id).join(", ")}.`, "error");
+    const classId = parts[0].toLowerCase();
+    const name = parts.slice(1).join(" ");
+    const cls = getClass(this.data, classId);
+    if (!cls) return this.log(`Unknown class "${classId}". Options: ${listClasses(this.data).map((c) => c.id).join(", ")}.`, "error");
+    if (this.save.exists(name)) return this.log(`A chronicle named "${esc(name)}" already exists.`, "error");
+
+    this.player = new Player(name, cls);
+    grantStartingKit(this.player, this.data, this.rng);
+    this.save.save(this.player);
+    this.state = STATE.IDLE;
+    this.term.clear();
+    this.log(`A new ${cls.name} rises: <b>${esc(name)}</b>.`, "success");
+    this.log(`"${esc(cls.blurb)}"`, "system");
+    this.cmdLook();
+  }
+
+  cmdLoad(name) {
+    name = name.trim();
+    if (!name) return this.log("Usage: load <name>", "error");
+    const p = this.save.load(name);
+    if (!p) return this.log(`No chronicle named "${esc(name)}".`, "error");
+    this.player = p;
+    this.state = STATE.IDLE;
+    this.term.clear();
+    this.log(`Welcome back, ${esc(p.name)} the ${p.classDef.name}. (Lvl ${p.level})`, "success");
+    this.cmdLook();
+  }
+
+  cmdDelete(name) {
+    name = name.trim();
+    if (!this.save.exists(name)) return this.log(`No chronicle named "${esc(name)}".`, "error");
+    this.save.remove(name);
+    this.log(`Chronicle "${esc(name)}" erased.`, "system");
+    this.showMenu();
+  }
+
+  cmdSave() {
+    this.save.save(this.player);
+    this.log("Progress saved.", "success");
+  }
+
+  // =================== WORLD ===================
+  cmdLook() {
+    const z = this.zoneOf(this.player.location);
+    this.term.rule(z.name.toUpperCase());
+    this.log(esc(z.description), "system");
+    this.log(`Recommended level: ${z.min_level}. Use <b>hunt</b> to seek danger.`, "cmd-desc-line");
+  }
+
+  cmdZones() {
+    this.term.rule("ZONES");
+    for (const z of this.data.zones) {
+      const ok = this.player.level >= z.min_level;
+      const tag = ok ? `<span class="msg-success">open</span>` : `<span class="msg-error">lvl ${z.min_level}</span>`;
+      const here = z.id === this.player.location ? " ◄ here" : "";
+      this.log(`${esc(z.name).padEnd(34, " ")} ${tag}${here}`);
+    }
+    this.log(`Travel with <b>travel &lt;name&gt;</b>.`, "cmd-desc-line");
+  }
+
+  cmdTravel(input) {
+    if (!input) return this.log("Usage: travel <zone>", "error");
+    const s = input.toLowerCase();
+    const z = this.data.zones.find((z) => z.id === s || z.name.toLowerCase().includes(s));
+    if (!z) return this.log(`Unknown zone "${esc(input)}".`, "error");
+    if (this.player.level < z.min_level) return this.log(`${z.name} demands level ${z.min_level}.`, "error");
+    if (this.player.location === z.id) return this.log("You're already here.", "system");
+    this.player.location = z.id;
+    this.save.save(this.player);
+    this.log(`You journey to ${z.name}.`, "info");
+    this.cmdLook();
+  }
+
+  cmdHunt() {
+    const z = this.zoneOf(this.player.location);
+    const roll = this.rng.float();
+    if (roll < 0.30) {
+      return this.startEncounter(z);
+    }
+    if (roll < 0.95) {
+      const boss = this.rng.chance(0.06);
+      this.startCombat(makeEnemy(this.data, this.rng, z, { boss }));
+      return;
+    }
+    this.log("You scour the area but find nothing of note.", "system");
+  }
+
+  cmdRest() {
+    if (this.player.hp >= this.player.maxHp && this.player.resource >= this.player.resourceMax) {
+      return this.log("You're already at full strength.", "system");
+    }
+    this.state = STATE.BUSY;
+    this.log("You make camp and tend your wounds…", "system");
+    const total = 2200;
+    const step = 110;
+    let elapsed = 0;
+    const startHp = this.player.hp;
+    const timer = setInterval(() => {
+      elapsed += step;
+      const pct = Math.min(1, elapsed / total);
+      this.player.hp = Math.round(startHp + (this.player.maxHp - startHp) * pct);
+      this.player.restoreResource(this.player.resourceMax * (step / total));
+      this.refresh();
+      if (pct >= 1) {
+        clearInterval(timer);
+        this.player.hp = this.player.maxHp;
+        this.player.resource = this.player.resourceMax;
+        this.state = STATE.IDLE;
+        this.save.save(this.player);
+        this.log("You rise restored.", "success");
+        this.refresh();
+      }
+    }, step);
+  }
+
+  // =================== ITEMS ===================
+  resolveItem(arg) {
+    arg = (arg ?? "").trim().toLowerCase();
+    if (!arg) return null;
+    if (/^\d+$/.test(arg)) {
+      const idx = parseInt(arg, 10) - 1;
+      const item = this.player.inventory[idx];
+      return item ? { item, source: "inv", idx } : null;
+    }
+    if (SLOTS.includes(arg) && this.player.equipment[arg]) {
+      return { item: this.player.equipment[arg], source: "equip", slot: arg };
+    }
+    return null;
+  }
+
+  cmdInventory() {
+    this.term.rule("INVENTORY");
+    const inv = this.player.inventory;
+    if (!inv.length) return this.log("Your bag is empty.", "system");
+    inv.forEach((item, i) => this.log(itemLine(item, this.data, { idx: i + 1, showValue: true })));
+    this.log(`<span class="cmd-desc">equip / inspect / use / forge / enchant / sell &lt;number&gt;</span>`);
+  }
+
+  cmdGear() {
+    this.term.rule("EQUIPPED");
+    for (const slot of SLOTS) {
+      const item = this.player.equipment[slot];
+      const label = this.data.slots[slot].label.padEnd(9, " ");
+      if (item) this.log(`${label} ${itemLine(item, this.data, {})}`);
+      else this.log(`${label} <span class="muted">— empty —</span>`);
+    }
+  }
+
+  cmdInspect(arg) {
+    const r = this.resolveItem(arg);
+    if (!r) return this.log("Inspect what? Use an inventory number or a slot name.", "error");
+    this.term.print(itemDetail(r.item, this.data));
+    if (r.source === "inv" && r.item.slot) {
+      const equipped = this.player.equipment[r.item.slot];
+      if (equipped) {
+        const diff = itemPower(r.item) - itemPower(equipped);
+        const word = diff > 0 ? `<span class="msg-success">upgrade (+${diff} power)</span>` : diff < 0 ? `<span class="msg-error">downgrade (${diff} power)</span>` : "sidegrade";
+        this.log(`vs equipped ${this.data.slots[r.item.slot].label}: ${word}`, "cmd-desc-line");
+      }
+    }
+  }
+
+  cmdEquip(arg) {
+    const r = this.resolveItem(arg);
+    if (!r || r.source !== "inv") return this.log("Equip which inventory item? (use a number)", "error");
+    const item = r.item;
+    if (item.kind === "consumable" || !item.slot) return this.log("You can't equip that.", "error");
+    const prev = this.player.equipment[item.slot];
+    this.player.equipment[item.slot] = item;
+    this.player.removeItem(item.uid);
+    if (prev) this.player.addItem(prev);
+    this.player.recalc();
+    this.save.save(this.player);
+    this.log(`Equipped ${itemNameHtml(item, this.data)}${prev ? `, stowing ${itemNameHtml(prev, this.data)}` : ""}.`, "success");
+  }
+
+  cmdUnequip(slot) {
+    slot = (slot ?? "").trim().toLowerCase();
+    if (!SLOTS.includes(slot)) return this.log(`Slot must be one of: ${SLOTS.join(", ")}.`, "error");
+    const item = this.player.equipment[slot];
+    if (!item) return this.log("That slot is already empty.", "system");
+    this.player.equipment[slot] = null;
+    this.player.addItem(item);
+    this.player.recalc();
+    this.save.save(this.player);
+    this.log(`Unequipped ${itemNameHtml(item, this.data)}.`, "system");
+  }
+
+  cmdDrop(arg) {
+    const r = this.resolveItem(arg);
+    if (!r || r.source !== "inv") return this.log("Drop which inventory item? (use a number)", "error");
+    this.player.removeItem(r.item.uid);
+    this.save.save(this.player);
+    this.log(`Discarded ${itemNameHtml(r.item, this.data)}.`, "system");
+  }
+
+  cmdUse(arg) {
+    const r = this.resolveItem(arg);
+    if (!r || r.item.kind !== "consumable") return this.log("Use which consumable? (an inventory number)", "error");
+    if (this.state === STATE.COMBAT) {
+      this.combat.useConsumable(r.item);
+      this.afterCombatAction();
+      return;
+    }
+    const eff = r.item.effect ?? {};
+    if (eff.heal) this.player.heal(eff.heal);
+    if (eff.healPct) this.player.healPct(eff.healPct);
+    if (eff.resource) this.player.restoreResource(eff.resource);
+    this.player.removeItem(r.item.uid);
+    this.save.save(this.player);
+    this.log(`You use ${itemNameHtml(r.item, this.data)}.`, "heal");
+  }
+
+  // =================== FORGE / ENCHANT ===================
+  cmdForge(arg) {
+    const r = this.resolveItem(arg);
+    if (!r || r.item.kind === "consumable" || !r.item.slot) return this.log("Forge which gear? (inventory number or slot name)", "error");
+    const info = forgeInfo(r.item, this.data);
+    if (info.atMax) return this.log(`${displayName(r.item)} is already at the forge limit.`, "system");
+    this.log(`Forging ${displayName(r.item)} → +${info.next}: costs ${info.shards} shards, ${info.gold}g · ${Math.round(info.success * 100)}% success.`, "cmd-desc-line");
+    const res = forge(this.player, r.item, this.data, this.rng);
+    const cls = res.result === "success" ? "success" : res.result === "downgrade" ? "error" : res.result === "blocked" ? "error" : "system";
+    this.log(res.message, cls);
+    if (res.result !== "blocked") this.save.save(this.player);
+  }
+
+  cmdEnchant(arg) {
+    const r = this.resolveItem(arg);
+    if (!r || r.item.kind === "consumable" || !r.item.slot) return this.log("Enchant which gear? (inventory number or slot name)", "error");
+    const info = enchantInfo(r.item, this.data);
+    if (!info.canEnchant) return this.log(`${displayName(r.item)} is too crude to enchant.`, "error");
+    this.log(`Enchanting costs ${info.essence} essence, ${info.gold}g.${info.atCap ? " (at affix cap — will replace the weakest)" : ""}`, "cmd-desc-line");
+    const res = enchant(this.player, r.item, this.data, this.rng);
+    this.log(res.message, res.result === "success" ? "info" : "error");
+    if (res.result === "success") this.save.save(this.player);
+  }
+
+  // =================== MARKET ===================
+  cmdShop() {
+    this.shopStock = rollStock(this.data, this.rng, this.player);
+    this.term.rule("THE MARKET");
+    this.log(`Your purse: <span class="msg-gold">${this.player.gold}g</span>. ${this.ai.isEnabled() ? "" : ""}`, "");
+    this.shopStock.forEach((entry, i) => {
+      const idx = `<span class="handle">${i + 1}</span>`;
+      let label;
+      if (entry.kind === "gear") label = itemLine(entry.item, this.data, {});
+      else label = `${entry.def.name} <span class="cmd-desc">— ${esc(entry.def.desc)}</span>`;
+      this.log(`${idx} ${label} <span class="msg-gold">${entry.price}g</span>`);
+    });
+    this.log(`<span class="cmd-desc">buy &lt;number&gt; · sell &lt;inventory number&gt;</span>`);
+  }
+
+  cmdBuy(arg) {
+    if (!this.shopStock) return this.log("Open the <b>shop</b> first.", "error");
+    const idx = parseInt(arg, 10) - 1;
+    const entry = this.shopStock[idx];
+    if (!entry) return this.log("No such item on offer.", "error");
+    const res = buy(this.player, entry, this.data);
+    this.log(res.message, res.ok ? "success" : "error");
+    if (res.ok) {
+      if (entry.kind === "gear") this.shopStock.splice(idx, 1); // sold out
+      this.save.save(this.player);
+    }
+  }
+
+  cmdSell(arg) {
+    const idx = parseInt(arg, 10) - 1;
+    const item = this.player.inventory[idx];
+    if (!item) return this.log("Sell which inventory item? (use a number)", "error");
+    const res = sell(this.player, item.uid, this.data);
+    this.log(res.message, res.ok ? "gold" : "error");
+    if (res.ok) this.save.save(this.player);
+  }
+
+  // =================== COMBAT ===================
+  startCombat(enemy) {
+    this.combat = new CombatSession({
+      player: this.player,
+      enemy,
+      data: this.data,
+      rng: this.rng,
+      log: (m, c) => this.log(m, c),
+      onEnd: (outcome) => this.endCombat(outcome),
+    });
+    this.state = STATE.COMBAT;
+    this.term.rule("AMBUSH");
+    const el = this.data.elements[enemy.element];
+    this.log(`A <b style="color:var(--danger)">${enemy.name}</b> (Lvl ${enemy.level}${enemy.boss ? ", BOSS" : ""}) blocks your path!`, "enemy");
+    if (enemy.element !== "physical") this.log(`It radiates <span style="color:${el?.color}">${el?.name}</span>.`, "cmd-desc-line");
+    this.log(`Commands: <b>attack</b>, <b>ability</b> (${this.player.classDef.ability.name}, ${this.player.classDef.ability.cost} ${this.player.resourceName}), <b>use &lt;n&gt;</b>, <b>flee</b>.`, "combat");
+  }
+
+  cmdAttack() { this.combat.playerAttack(); this.afterCombatAction(); }
+  cmdAbility() { this.combat.playerAbility(); this.afterCombatAction(); }
+  cmdFlee() { this.combat.flee(); this.afterCombatAction(); }
+
+  afterCombatAction() {
+    // If combat ended, endCombat already ran via onEnd. Otherwise just refresh.
+    this.refresh();
+  }
+
+  endCombat(outcome) {
+    const enemy = this.combat.enemy;
+    if (outcome === "victory") {
+      this.player.kills++;
+      const r = this.player.gainXp(enemy.xp);
+      this.player.gold += enemy.gold;
+      this.log(`You gain ${enemy.xp} XP and ${enemy.gold} gold.`, "success");
+      this.rollDrops(enemy);
+      if (r) this.log(`★ LEVEL UP! You are now level ${r.leveledTo}. ★`, "gold");
+      this.state = STATE.IDLE;
+      this.combat = null;
+      this.save.save(this.player);
+    } else if (outcome === "fled") {
+      this.state = STATE.IDLE;
+      this.combat = null;
+    } else if (outcome === "defeat") {
+      this.handleDefeat(enemy);
+    }
+    this.refresh();
+  }
+
+  rollDrops(enemy) {
+    // gold/material trickle
+    if (this.rng.chance(0.5)) { const s = this.rng.range(1, enemy.boss ? 6 : 2); this.player.shards += s; this.log(`Salvaged ${s} forge shard${s > 1 ? "s" : ""}.`, "item"); }
+    if (this.rng.chance(0.25)) { this.player.essence += 1; this.log(`Recovered 1 arcane essence.`, "item"); }
+    // gear drop
+    const dropChance = enemy.boss ? 1.0 : enemy.special ? 0.7 : 0.45;
+    if (this.rng.chance(dropChance)) {
+      const bias = enemy.boss ? 1.6 : enemy.special ? 1.25 : 1.0;
+      const item = generateItem(this.data, this.rng, { ilvl: enemy.level, luck: this.player.attrs.luck, rarityBias: bias, classId: this.player.classId });
+      this.player.addItem(item);
+      this.log(`Loot: ${itemNameHtml(item, this.data)} ${this.data.slots[item.slot].label}`, "loot");
+    }
+  }
+
+  handleDefeat(enemy) {
+    this.log(`${enemy.name} strikes you down…`, "error");
+    const lost = Math.round(this.player.gold * 0.25);
+    this.player.gold -= lost;
+    this.player.location = "enchanted_forest";
+    this.player.hp = Math.max(1, Math.round(this.player.maxHp * 0.5));
+    this.player.resource = this.player.resourceMax;
+    this.combat = null;
+    this.state = STATE.IDLE;
+    this.save.save(this.player);
+    this.log(`You wake at the edge of the Enchanted Forest, ${lost} gold lighter but alive.`, "system");
+  }
+
+  // =================== ENCOUNTERS ===================
+  async startEncounter(zone) {
+    const event = rollEvent(this.data, this.rng, this.player);
+    this.encounter = { event, zone };
+    this.state = STATE.ENCOUNTER;
+    this.term.rule(event.title.toUpperCase());
+
+    let text = event.text;
+    if (this.ai.isEnabled()) {
+      const thinking = this.log("<span class='muted'>the world holds its breath…</span>", "");
+      const { system, user } = narrationPrompt(event, zone, this.player);
+      const out = await this.ai.narrate(system, user);
+      thinking.remove();
+      if (out) text = out;
+    }
+    this.log(esc(text), "info");
+    event.choices.forEach((c, i) => this.log(`<span class="handle">${i + 1}</span> ${esc(c.label)}`, ""));
+    this.log(`<span class="cmd-desc">choose a number…</span>`);
+    this.refresh();
+  }
+
+  cmdChoose(args, raw) {
+    // Accept "choose 2", "pick 2", or a bare number command ("2").
+    let n = parseInt(args, 10);
+    if (isNaN(n)) {
+      const word = (raw ?? "").trim().split(/\s+/)[0];
+      n = parseInt(word, 10);
+    }
+    if (isNaN(n)) return this.log("Pick a choice by number.", "error");
+    const res = resolveChoice(this.player, this.encounter.event, n - 1, this.data, this.rng);
+    if (!res.ok) return this.log(res.message, "error");
+    this.log(esc(res.text), "system");
+    this.term.printLines(res.lines.map((l) => ({ msg: l.item ? `${l.msg.replace(esc(l.item.name), itemNameHtml(l.item, this.data))}` : l.msg, cls: l.cls })));
+    if (res.leveled) this.log(`★ LEVEL UP! Now level ${res.leveled.leveledTo}. ★`, "gold");
+
+    const fight = res.fight;
+    this.encounter = null;
+    if (fight) {
+      this.startCombat(makeEnemy(this.data, this.rng, this.zoneOf(this.player.location), {}));
+    } else {
+      this.state = STATE.IDLE;
+      this.save.save(this.player);
+    }
+    this.refresh();
+  }
+
+  // =================== SYSTEM ===================
+  cmdStatus() {
+    if (!this.player) return this.log("No active character. Use <b>new</b> or <b>load</b>.", "system");
+    const p = this.player;
+    this.term.rule(`${p.name.toUpperCase()} — ${p.classDef.name}`);
+    this.log(`Level ${p.level} · ${p.xp}/${p.xpToNext} XP · ${p.kills} kills`);
+    this.log(`HP ${p.hp}/${p.maxHp} · ${p.resourceName} ${p.resource}/${p.resourceMax}`);
+    this.log(`STR ${p.attrs.str} · AGI ${p.attrs.agi} · INT ${p.attrs.int} · VIT ${p.attrs.vit} · LUCK ${p.attrs.luck}`);
+    this.log(`ATK ${p.attackPower} · DEF ${p.defense} · Crit ${Math.round(p.critChance * 100)}% (x${p.critMult.toFixed(2)}) · Dodge ${Math.round(p.dodge * 100)}%`);
+    if (p.lifesteal) this.log(`Lifesteal ${Math.round(p.lifesteal * 100)}%`);
+    this.log(`Gold ${p.gold} · Shards ${p.shards} · Essence ${p.essence}`);
+    this.log(`Ability — <b>${p.classDef.ability.name}</b>: ${esc(p.classDef.ability.desc)}`, "cmd-desc-line");
+  }
+
+  cmdHelp() {
+    this.term.rule("HELP");
+    this.log("Type commands at the prompt. The Codex on the right lists everything.", "system");
+    this.log("Core loop: <b>hunt</b> for fights & events, loot drops, <b>equip</b> upgrades, <b>forge</b>/<b>enchant</b> to power them up, <b>shop</b> to spend gold, <b>rest</b> to heal.", "system");
+    this.log("In combat: <b>attack</b>, <b>ability</b>, <b>use &lt;n&gt;</b>, <b>flee</b>.", "system");
+    this.log("Optional AI flavor: <b>ai &lt;provider&gt; &lt;key&gt;</b> (gemini/groq/openrouter). " + this.ai.status(), "cmd-desc-line");
+  }
+
+  cmdAI(args) {
+    const parts = args.split(/\s+/).filter(Boolean);
+    if (!parts.length || parts[0] === "status") return this.log(this.ai.status(), "info");
+    if (parts[0] === "off") { this.ai.disable(); return this.log("AI narrator disabled.", "system"); }
+    const provider = parts[0].toLowerCase();
+    if (!PROVIDERS[provider]) return this.log(`Provider must be one of: ${Object.keys(PROVIDERS).join(", ")}.`, "error");
+    const key = parts[1];
+    if (!key) return this.log(`Usage: ai ${provider} <api-key> [model]`, "error");
+    const model = parts[2];
+    const res = this.ai.configure({ provider, key, model });
+    this.log(res.message, res.ok ? "success" : "error");
+  }
+}
+
+// ---- boot ----
+window.addEventListener("DOMContentLoaded", () => {
+  new Game().boot();
+});
