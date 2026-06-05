@@ -30,6 +30,15 @@ export class Player {
     this.resource = classDef.resourceMax ?? 100;
     this.kills = 0;
 
+    // Run modifiers (locked at creation).
+    this.difficulty = "tempered";
+    this.hardcore = false;
+
+    // Skill tree.
+    this.skills = [];          // unlocked skill ids
+    this.skillPoints = 0;
+    this.skillMods = {};       // aggregated passive bonuses (transient — recomputed from skills)
+
     // Snapshot the class definition we need at runtime so saves are self-contained.
     this._class = classDef;
     this.hp = 1;
@@ -71,28 +80,36 @@ export class Player {
 
   /** Recompute every derived combat value. Call after any gear/level change. */
   recalc() {
+    const sm = this.skillMods ?? {};
     const base = this.baseAttrs();
     this.attrs = {};
-    for (const a of ATTRS) this.attrs[a] = Math.round(base[a] + this.gearStat(a));
+    for (const a of ATTRS) this.attrs[a] = Math.round(base[a] + this.gearStat(a) + (sm[a] ?? 0));
 
     const c = this._class;
     this.resourceMax = c.resourceMax ?? 100;
     this.resourceName = c.resourceName ?? "Resource";
-    this.maxHp = Math.round(20 + this.attrs.vit * (c.hpPerVit ?? 10) + this.gearStat("hp"));
+    this.maxHp = Math.round((20 + this.attrs.vit * (c.hpPerVit ?? 10) + this.gearStat("hp")) * (1 + (sm.hpPct ?? 0)));
 
     const scaleStat = SCALE_STAT[this.classId] ?? "str";
     const scaleVal = this.attrs[scaleStat];
 
     const weaponDmg = this.gearStat("dmg");
     this.scaleStat = scaleStat;
-    this.attackPower = Math.max(1, Math.round(1 + weaponDmg + scaleVal * 0.6));
-    this.defense = Math.round(this.gearStat("def") + this.attrs.vit * 0.25);
-    this.critChance = clamp(0.05 + this.attrs.agi * 0.004 + this.attrs.luck * 0.003 + this.gearStat("crit"), 0, 0.85);
-    this.critMult = 1.75 + this.gearStat("critDmg");
-    this.dodge = clamp(this.attrs.agi * 0.003 + this.attrs.luck * 0.0025 + this.gearStat("dodge"), 0, 0.5);
-    this.lifesteal = clamp(this.gearStat("lifesteal"), 0, 0.75);
+    this.attackPower = Math.max(1, Math.round((1 + weaponDmg + scaleVal * 0.6) * (1 + (sm.dmgPct ?? 0))));
+    this.defense = Math.round((this.gearStat("def") + this.attrs.vit * 0.25) * (1 + (sm.defPct ?? 0)));
+    this.critChance = clamp(0.05 + this.attrs.agi * 0.004 + this.attrs.luck * 0.003 + this.gearStat("crit") + (sm.crit ?? 0), 0, 0.85);
+    this.critMult = 1.75 + this.gearStat("critDmg") + (sm.critDmg ?? 0);
+    this.dodge = clamp(this.attrs.agi * 0.003 + this.attrs.luck * 0.0025 + this.gearStat("dodge") + (sm.dodge ?? 0), 0, 0.5);
+    this.lifesteal = clamp(this.gearStat("lifesteal") + (sm.lifesteal ?? 0), 0, 0.75);
     this.elemDmg = this.gearStat("elemDmg");
     this.element = this.equipment.weapon?.stats?.element ?? "physical";
+
+    // Skill-driven multipliers consumed elsewhere (combat / rewards).
+    this.abilityPower = 1 + (sm.abilityPower ?? 0);
+    this.costReduction = clamp(sm.costReduction ?? 0, 0, 0.8);
+    this.dropBonus = sm.dropBonus ?? 0;
+    this.goldFind = sm.goldFind ?? 0;
+    this.xpBonus = sm.xpBonus ?? 0;
 
     if (this.hp > this.maxHp) this.hp = this.maxHp;
     if (this.resource > this.resourceMax) this.resource = this.resourceMax;
@@ -124,10 +141,11 @@ export class Player {
       levels++;
     }
     if (levels > 0) {
+      this.skillPoints += levels; // one skill point per level
       this.recalc();
       this.hp = this.maxHp;
       this.resource = this.resourceMax;
-      return { leveledTo: this.level, levels };
+      return { leveledTo: this.level, levels, skillPoints: levels };
     }
     return null;
   }
@@ -164,6 +182,10 @@ export class Player {
       hp: this.hp,
       resource: this.resource,
       kills: this.kills,
+      difficulty: this.difficulty,
+      hardcore: this.hardcore,
+      skills: this.skills,
+      skillPoints: this.skillPoints,
     };
   }
 
@@ -179,7 +201,14 @@ export class Player {
       inventory: raw.inventory ?? [],
       equipment: { ...Object.fromEntries(SLOTS.map((s) => [s, null])), ...(raw.equipment ?? {}) },
       kills: raw.kills ?? 0,
+      difficulty: raw.difficulty ?? "tempered",
+      hardcore: raw.hardcore ?? false,
+      skills: raw.skills ?? [],
+      // Pre-skill-tree saves get retroactive points so they're not penalized.
+      skillPoints: raw.skillPoints ?? Math.max(0, (raw.level ?? 1) - 1),
     });
+    // skillMods are re-aggregated by the caller (needs skill data); recalc here
+    // runs without them, then the caller calls recalc again after applying mods.
     p.recalc();
     p.hp = clamp(raw.hp ?? p.maxHp, 1, p.maxHp);
     p.resource = clamp(raw.resource ?? p.resourceMax, 0, p.resourceMax);

@@ -28,7 +28,7 @@ function mitigation(def) {
 }
 
 /** Build a scaled enemy instance for a zone. */
-export function makeEnemy(data, rng, zone, { boss = false } = {}) {
+export function makeEnemy(data, rng, zone, { boss = false, mods = {} } = {}) {
   const pool = zone.monsters ?? [];
   // Boss fights prefer entries flagged boss/special; otherwise any monster.
   let candidates = pool
@@ -46,14 +46,20 @@ export function makeEnemy(data, rng, zone, { boss = false } = {}) {
 
   const level = Math.max(1, zone.min_level + rng.range(0, 3));
   const lvlFactor = 1 + (level - zone.min_level) * 0.08;
-  const eliteFactor = base.boss ? 1.0 : base.special ? 1.0 : 1.0;
+  const hpMult = mods.mobHp ?? 1;
+  const dmgMult = mods.mobDmg ?? 1;
 
-  const maxHp = Math.round(base.health * lvlFactor * eliteFactor);
-  const attack = Math.round(base.damage * lvlFactor);
+  // Reward is computed from the *unscaled* stats so difficulty's xp/gold knobs
+  // (applied at reward time) stay the single source of reward truth.
+  const rawHp = base.health * lvlFactor;
+  const rawAtk = base.damage * lvlFactor;
   const defense = Math.round((base.defense ?? 0) * lvlFactor);
+
+  const maxHp = Math.round(rawHp * hpMult);
+  const attack = Math.round(rawAtk * dmgMult);
   const element = base.boss || base.special ? zoneElement(zone) : (rng.chance(0.35) ? zoneElement(zone) : "physical");
 
-  const xp = Math.round((maxHp * 0.35 + attack * 2.2 + defense * 1.5) * (base.boss ? 2.2 : base.special ? 1.5 : 1));
+  const xp = Math.round((rawHp * 0.35 + rawAtk * 2.2 + defense * 1.5) * (base.boss ? 2.2 : base.special ? 1.5 : 1));
   const gold = Math.round(xp * rng.between(0.3, 0.7));
 
   return {
@@ -120,15 +126,17 @@ export class CombatSession {
     if (this.over) return;
     const p = this.player;
     const ab = p.classDef.ability;
-    if (p.resource < ab.cost) {
-      this.log(`Not enough ${p.resourceName} (${p.resource}/${ab.cost}).`, "error");
+    const power = p.abilityPower ?? 1;             // skill: ability power
+    const cost = Math.max(1, Math.round(ab.cost * (1 - (p.costReduction ?? 0)))); // skill: cheaper
+    if (p.resource < cost) {
+      this.log(`Not enough ${p.resourceName} (${p.resource}/${cost}).`, "error");
       return;
     }
     this.turn++;
-    p.resource -= ab.cost;
+    p.resource -= cost;
 
     if (ab.kind === "attack") {
-      const base = p.attackPower * ab.mult;
+      const base = p.attackPower * ab.mult * power;
       let crit = false;
       let value;
       if (ab.guaranteedCrit) {
@@ -144,7 +152,7 @@ export class CombatSession {
       this._dealToEnemy(dmg, { crit, effMult, element: p.element, label: "It lands" });
     } else if (ab.kind === "spell") {
       const scaleVal = p.attrs[ab.scale] ?? 0;
-      const raw = Math.round(scaleVal * ab.mult + p.elemDmg);
+      const raw = Math.round((scaleVal * ab.mult + p.elemDmg) * power);
       const effMult = this.effectiveness(ab.element, this.enemy.element);
       const dmg = Math.round(raw * effMult);
       this.log(`✦ ${ab.name}!`, "ability");
@@ -155,7 +163,7 @@ export class CombatSession {
       p.heal(healed);
       this.log(`✦ ${ab.name}! You recover ${healed} HP.`, "heal");
       const scaleVal = p.attrs[ab.scale] ?? 0;
-      const raw = Math.round(scaleVal * ab.mult);
+      const raw = Math.round(scaleVal * ab.mult * power);
       const effMult = this.effectiveness(ab.element, this.enemy.element);
       this._dealToEnemy(Math.round(raw * effMult), { crit: false, effMult, element: ab.element, label: "Holy light smites", ignoreDef: true });
     }

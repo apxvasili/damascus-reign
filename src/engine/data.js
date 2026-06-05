@@ -13,6 +13,9 @@ const FILES = {
   events: "./data/events.json",
   shop: "./data/shop.json",
   forge: "./data/forge.json",
+  difficulties: "./data/difficulties.json",
+  skills: "./data/skills.json",
+  version: "./data/version.json",
 };
 
 export async function loadGameData() {

@@ -253,3 +253,13 @@ body {
 }
 @keyframes xShake { 0% { transform: translate(-50%,-50%) rotate(-0.6deg); } 100% { transform: translate(-50%,-50%) rotate(0.6deg); } }
 @keyframes hueShift { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+
+/* ============================================================
+   SKILL TREE
+   ============================================================ */
+.skill-branch { font-weight: bold; letter-spacing: 1px; }
+.skill-num { display: inline-block; min-width: 1.6em; color: var(--highlight); font-weight: bold; }
+.skill-num.done { color: var(--success); }
+.skill-on  { color: var(--success); font-weight: bold; }                 /* unlocked */
+.skill-can { color: var(--highlight); font-weight: bold; text-shadow: 0 0 6px rgba(212,175,55,0.5); } /* available now */
+.skill-off { color: #6b6b6b; }                                          /* locked */

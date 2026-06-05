@@ -1,0 +1,54 @@
+{
+  "note": "Passive skill tree. 1 point per level. Each skill lists prerequisite skill ids (req) that must be unlocked first. mods are summed across all unlocked skills and applied in Player.recalc(). Mod keys: str/agi/int/vit/luck (flat attrs), crit/critDmg/dodge/lifesteal (fractions), dmgPct/defPct/hpPct/abilityPower/costReduction (fractions), dropBonus (rarity bias add), goldFind/xpBonus (reward fractions).",
+  "pointsPerLevel": 1,
+  "branches": [
+    {
+      "id": "might", "name": "Might", "color": "#e0792b",
+      "skills": [
+        { "id": "might_1", "name": "Brute Force",  "tier": 1, "cost": 1, "req": [],                    "desc": "+3 Strength",            "mods": { "str": 3 } },
+        { "id": "might_2", "name": "Keen Edge",    "tier": 1, "cost": 1, "req": [],                    "desc": "+4% Crit Chance",        "mods": { "crit": 0.04 } },
+        { "id": "might_3", "name": "Heavy Blows",  "tier": 2, "cost": 2, "req": ["might_1"],           "desc": "+8% Damage",             "mods": { "dmgPct": 0.08 } },
+        { "id": "might_4", "name": "Bloodlust",    "tier": 2, "cost": 2, "req": ["might_2"],           "desc": "+6% Crit Chance",        "mods": { "crit": 0.06 } },
+        { "id": "might_5", "name": "Executioner",  "tier": 3, "cost": 3, "req": ["might_4"],           "desc": "+25% Crit Damage",       "mods": { "critDmg": 0.25 } },
+        { "id": "might_6", "name": "Berserker",    "tier": 3, "cost": 3, "req": ["might_3"],           "desc": "+12% Damage",            "mods": { "dmgPct": 0.12 } },
+        { "id": "might_7", "name": "Warlord",      "tier": 4, "cost": 4, "req": ["might_5", "might_6"], "desc": "+6 STR and +12% Damage", "mods": { "str": 6, "dmgPct": 0.12 } }
+      ]
+    },
+    {
+      "id": "bulwark", "name": "Bulwark", "color": "#4aa3ff",
+      "skills": [
+        { "id": "bul_1", "name": "Toughness",     "tier": 1, "cost": 1, "req": [],                 "desc": "+3 Vitality",             "mods": { "vit": 3 } },
+        { "id": "bul_2", "name": "Iron Skin",     "tier": 1, "cost": 1, "req": [],                 "desc": "+10% Armor",              "mods": { "defPct": 0.10 } },
+        { "id": "bul_3", "name": "Hardy",         "tier": 2, "cost": 2, "req": ["bul_1"],          "desc": "+8% Max HP",              "mods": { "hpPct": 0.08 } },
+        { "id": "bul_4", "name": "Evasion",       "tier": 2, "cost": 2, "req": ["bul_2"],          "desc": "+4% Dodge",               "mods": { "dodge": 0.04 } },
+        { "id": "bul_5", "name": "Fortress",      "tier": 3, "cost": 3, "req": ["bul_3"],          "desc": "+15% Armor and +6% HP",   "mods": { "defPct": 0.15, "hpPct": 0.06 } },
+        { "id": "bul_6", "name": "Second Wind",   "tier": 3, "cost": 3, "req": ["bul_4"],          "desc": "+5% Lifesteal",           "mods": { "lifesteal": 0.05 } },
+        { "id": "bul_7", "name": "Unbreakable",   "tier": 4, "cost": 4, "req": ["bul_5", "bul_6"], "desc": "+8 VIT and +12% Max HP",  "mods": { "vit": 8, "hpPct": 0.12 } }
+      ]
+    },
+    {
+      "id": "fortune", "name": "Fortune", "color": "#ffe14d",
+      "skills": [
+        { "id": "for_1", "name": "Lucky",          "tier": 1, "cost": 1, "req": [],                 "desc": "+3 Luck",                  "mods": { "luck": 3 } },
+        { "id": "for_2", "name": "Scavenger",      "tier": 1, "cost": 1, "req": [],                 "desc": "+15% Gold Find",           "mods": { "goldFind": 0.15 } },
+        { "id": "for_3", "name": "Treasure Hunter","tier": 2, "cost": 2, "req": ["for_1"],          "desc": "+0.2 Loot Rarity Bias",    "mods": { "dropBonus": 0.2 } },
+        { "id": "for_4", "name": "Quick Study",    "tier": 2, "cost": 2, "req": ["for_2"],          "desc": "+12% XP",                  "mods": { "xpBonus": 0.12 } },
+        { "id": "for_5", "name": "Fortune's Favor","tier": 3, "cost": 3, "req": ["for_3"],          "desc": "+5 Luck and +0.25 Rarity", "mods": { "luck": 5, "dropBonus": 0.25 } },
+        { "id": "for_6", "name": "Midas Touch",    "tier": 3, "cost": 3, "req": ["for_4"],          "desc": "+30% Gold Find",           "mods": { "goldFind": 0.30 } },
+        { "id": "for_7", "name": "Destiny",        "tier": 4, "cost": 4, "req": ["for_5", "for_6"], "desc": "+0.4 Rarity and +20% XP",  "mods": { "dropBonus": 0.4, "xpBonus": 0.2 } }
+      ]
+    },
+    {
+      "id": "arsenal", "name": "Arsenal", "color": "#c98bff",
+      "skills": [
+        { "id": "ars_1", "name": "Sharpshooter",  "tier": 1, "cost": 1, "req": [],                 "desc": "+15% Crit Damage",          "mods": { "critDmg": 0.15 } },
+        { "id": "ars_2", "name": "Siphon",        "tier": 1, "cost": 1, "req": [],                 "desc": "+3% Lifesteal",             "mods": { "lifesteal": 0.03 } },
+        { "id": "ars_3", "name": "Focused Power", "tier": 2, "cost": 2, "req": ["ars_1"],          "desc": "+10% Ability Power",        "mods": { "abilityPower": 0.10 } },
+        { "id": "ars_4", "name": "Efficiency",    "tier": 2, "cost": 2, "req": ["ars_2"],          "desc": "-15% Ability Cost",         "mods": { "costReduction": 0.15 } },
+        { "id": "ars_5", "name": "Overcharge",    "tier": 3, "cost": 3, "req": ["ars_3"],          "desc": "+20% Ability Power",        "mods": { "abilityPower": 0.20 } },
+        { "id": "ars_6", "name": "Vampirism",     "tier": 3, "cost": 3, "req": ["ars_4"],          "desc": "+6% Lifesteal",             "mods": { "lifesteal": 0.06 } },
+        { "id": "ars_7", "name": "Apex",          "tier": 4, "cost": 4, "req": ["ars_5", "ars_6"], "desc": "+25% Ability Power, +5% Crit","mods": { "abilityPower": 0.25, "crit": 0.05 } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "note": "Chosen once at character creation, locked for the run. mobHp/mobDmg scale enemy stats; loot adds to drop rarity bias and drop chance; xp/gold scale rewards. Hardcore is an independent flag layered on top.",
+  "default": "tempered",
+  "levels": [
+    { "id": "tender",   "name": "Tender",   "tag": "easy",   "color": "#6aa84f", "mobHp": 0.8, "mobDmg": 0.7, "loot": 0.95, "xp": 0.9,  "gold": 0.9,  "desc": "A gentler realm. Fewer teeth, leaner spoils." },
+    { "id": "tempered", "name": "Tempered", "tag": "normal", "color": "#c2b280", "mobHp": 1.0, "mobDmg": 1.0, "loot": 1.0,  "xp": 1.0,  "gold": 1.0,  "desc": "The realm as it was forged. Balanced." },
+    { "id": "brutal",   "name": "Brutal",   "tag": "hard",   "color": "#e0792b", "mobHp": 1.4, "mobDmg": 1.4, "loot": 1.3,  "xp": 1.25, "gold": 1.2,  "desc": "Harder hits, richer hauls. For the seasoned." },
+    { "id": "damascus", "name": "Damascus", "tag": "savage", "color": "#c0392b", "mobHp": 1.9, "mobDmg": 1.7, "loot": 1.7,  "xp": 1.6,  "gold": 1.5,  "desc": "Folded steel and cruelty. Only the proven survive." }
+  ],
+  "hardcore": {
+    "name": "Hardcore",
+    "loot": 1.35,
+    "xp": 1.15,
+    "desc": "One life. Death is permanent — but the dead drop far richer."
+  }
+}

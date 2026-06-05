@@ -1,0 +1,5 @@
+{
+  "note": "Bump 'version' on every deploy so running clients can detect they're outdated. The `update` command compares this (re-fetched live) against the version loaded at boot.",
+  "version": "1.2.0",
+  "codename": "Iron & Fortune"
+}
