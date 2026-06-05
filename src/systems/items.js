@@ -19,16 +19,18 @@ const ENHANCE_KEYS = new Set([
   "dmg", "def", "hp", "elemDmg", "str", "agi", "int", "vit", "luck", "allStats",
 ]);
 
-/** Pick a rarity, biased by player luck and an external bias multiplier. */
+/**
+ * Pick a rarity, biased by player luck and an external bias multiplier.
+ *
+ * Rarities are ordered common→rare in data; each tier's weight is multiplied by
+ * `factor^rankIndex`, so luck/bias tilt smoothly toward rarer tiers without ever
+ * making them guaranteed. (The old `tilt^(1/weight)` formula exploded — a single
+ * boss could roll the top tier ~98% of the time.)
+ */
 export function rollRarity(data, rng, { luck = 0, bias = 1 } = {}) {
-  // Higher luck/bias nudges weight toward rarer tiers by dampening common ones.
-  const rarities = data.rarities;
-  const tilt = 1 + luck * 0.012 + (bias - 1);
-  return rng.weighted(rarities, (r) => {
-    // Rarer tiers (smaller weight) get amplified by tilt; common tiers shrink.
-    const rarityRank = 1 / Math.max(0.1, r.weight);
-    return r.weight * Math.pow(tilt, rarityRank * 6);
-  });
+  const factor = 1 + luck * 0.01 + (bias - 1) * 0.6;
+  const entries = data.rarities.map((r, i) => ({ r, w: r.weight * Math.pow(factor, i) }));
+  return rng.weighted(entries, (e) => e.w).r;
 }
 
 function rollSlot(data, rng) {

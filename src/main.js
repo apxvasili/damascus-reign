@@ -13,7 +13,7 @@ import { Terminal } from "./ui/terminal.js";
 import { Panels } from "./ui/panels.js";
 import { itemLine, itemDetail, itemNameHtml, esc } from "./ui/render.js";
 import { listClasses, getClass, grantStartingKit } from "./systems/classes.js";
-import { displayName, generateItem, itemPower, sellValue } from "./systems/items.js";
+import { displayName, generateItem, itemPower, sellValue, rarityOf } from "./systems/items.js";
 import { CombatSession, makeEnemy } from "./systems/combat.js";
 import { forge, forgeInfo } from "./systems/forge.js";
 import { enchant, enchantInfo } from "./systems/enchant.js";
@@ -23,6 +23,13 @@ import { SaveManager } from "./systems/save.js";
 import { AINarrator, PROVIDERS } from "./systems/ai.js";
 
 const STATE = { MENU: "MENU", IDLE: "IDLE", COMBAT: "COMBAT", ENCOUNTER: "ENCOUNTER", BUSY: "BUSY" };
+
+// Human slot labels (as shown by `gear`) map back to their internal slot key, so
+// `unequip feet` works as well as `unequip boots`.
+const SLOT_ALIASES = {
+  head: "hat", chest: "armor", legs: "pants", hands: "gloves", feet: "boots",
+  neck: "necklace", "off-hand": "offhand", mainhand: "weapon",
+};
 
 const TITLE_ART = String.raw`
  ▓█████▄  ▄▄▄       ███▄ ▄███▓ ▄▄▄        ██████  ▄████▄   █    ██   ██████
@@ -73,6 +80,7 @@ class Game {
     }
     this.save = new SaveManager(this.data);
     this.registerCommands();
+    this.term.setCompleter((line) => this.complete(line));
     this.panels.renderCodex(this.registry.grouped());
     this.refresh();
     this.showMenu();
@@ -149,6 +157,7 @@ class Game {
     r.register({ name: "clear", aliases: ["cls"], desc: "Clear the screen.", group: "System", run: () => this.term.clear() });
     r.register({ name: "save", desc: "Save your progress.", group: "System", states: [STATE.IDLE], run: () => this.cmdSave() });
     r.register({ name: "ai", usage: "ai <provider> <key> [model] | ai off | ai status", desc: "Configure the optional AI narrator.", group: "System", run: (a) => this.cmdAI(a) });
+    r.register({ name: "credits", desc: "Who made this.", group: "System", run: () => this.cmdCredits() });
   }
 
   // =================== CHARACTER ===================
@@ -299,6 +308,13 @@ class Game {
   }
 
   // =================== ITEMS ===================
+  /** Resolve a slot key from either its internal name or its display label. */
+  slotKey(arg) {
+    arg = (arg ?? "").trim().toLowerCase();
+    if (SLOTS.includes(arg)) return arg;
+    return SLOT_ALIASES[arg] ?? null;
+  }
+
   resolveItem(arg) {
     arg = (arg ?? "").trim().toLowerCase();
     if (!arg) return null;
@@ -307,10 +323,60 @@ class Game {
       const item = this.player.inventory[idx];
       return item ? { item, source: "inv", idx } : null;
     }
-    if (SLOTS.includes(arg) && this.player.equipment[arg]) {
-      return { item: this.player.equipment[arg], source: "equip", slot: arg };
+    const slot = this.slotKey(arg);
+    if (slot && this.player.equipment[slot]) {
+      return { item: this.player.equipment[slot], source: "equip", slot };
     }
     return null;
+  }
+
+  /**
+   * Context-aware Tab completion. Returns full-line candidates: the command word
+   * when typing the verb, or argument values (slots, zones, classes, providers)
+   * once a command is chosen.
+   */
+  complete(line) {
+    const trailing = /\s$/.test(line);
+    const parts = line.trim().split(/\s+/).filter(Boolean);
+
+    // Completing the command verb itself.
+    if (parts.length === 0 || (parts.length === 1 && !trailing)) {
+      const prefix = (parts[0] ?? "").toLowerCase();
+      const names = [...this.registry.commands.keys()].filter((n) => n && /^[a-z]/.test(n));
+      return names.filter((n) => n.startsWith(prefix)).sort();
+    }
+
+    const cmd = this.registry.lookup.get(parts[0].toLowerCase());
+    const argPrefix = trailing ? "" : parts[parts.length - 1].toLowerCase();
+    const head = (trailing ? parts : parts.slice(0, -1)).join(" ");
+
+    let options = [];
+    if (cmd === "unequip") {
+      options = SLOTS.filter((s) => this.player?.equipment[s]); // only occupied slots
+    } else if (cmd === "equip" || cmd === "inspect" || cmd === "forge" || cmd === "enchant" || cmd === "use" || cmd === "sell" || cmd === "drop") {
+      // suggest equipped slot names for inspect/forge/enchant; numbers are typed directly
+      if (cmd === "inspect" || cmd === "forge" || cmd === "enchant") options = SLOTS.filter((s) => this.player?.equipment[s]);
+    } else if (cmd === "travel") {
+      options = this.data.zones.filter((z) => this.player && this.player.level >= z.min_level).map((z) => z.id);
+    } else if (cmd === "new" && parts.length <= 2) {
+      options = listClasses(this.data).map((c) => c.id);
+    } else if (cmd === "ai" && parts.length <= 2) {
+      options = ["gemini", "groq", "openrouter", "status", "off"];
+    } else if (cmd === "load" || cmd === "delete") {
+      options = this.save.names();
+    }
+
+    const matched = options.filter((o) => o.toLowerCase().startsWith(argPrefix));
+    return matched.map((o) => `${head} ${o}`);
+  }
+
+  /** Trigger a visual celebration for a noteworthy gear drop. */
+  celebrateDrop(item) {
+    if (!item || item.kind === "consumable" || !item.rarity) return;
+    const idx = this.data.rarities.findIndex((r) => r.tier === item.rarity);
+    if (idx < 4) return; // F..C drop quietly
+    const r = rarityOf(item, this.data);
+    this.term.dropFx({ tier: r.tier, label: r.label, color: r.color, name: item.name, intense: idx >= 6 });
   }
 
   cmdInventory() {
@@ -325,10 +391,12 @@ class Game {
     this.term.rule("EQUIPPED");
     for (const slot of SLOTS) {
       const item = this.player.equipment[slot];
-      const label = this.data.slots[slot].label.padEnd(9, " ");
-      if (item) this.log(`${label} ${itemLine(item, this.data, {})}`);
-      else this.log(`${label} <span class="muted">— empty —</span>`);
+      // Show the typeable slot key (fixed width via CSS) so `unequip <slot>` is unambiguous.
+      const label = `<span class="slot-key">${slot}</span>`;
+      if (item) this.log(`${label}${itemLine(item, this.data, {})}`);
+      else this.log(`${label}<span class="muted">— empty —</span>`);
     }
+    this.log(`<span class="cmd-desc">unequip &lt;slot&gt; — Tab cycles equipped slots</span>`);
   }
 
   cmdInspect(arg) {
@@ -359,9 +427,9 @@ class Game {
     this.log(`Equipped ${itemNameHtml(item, this.data)}${prev ? `, stowing ${itemNameHtml(prev, this.data)}` : ""}.`, "success");
   }
 
-  cmdUnequip(slot) {
-    slot = (slot ?? "").trim().toLowerCase();
-    if (!SLOTS.includes(slot)) return this.log(`Slot must be one of: ${SLOTS.join(", ")}.`, "error");
+  cmdUnequip(arg) {
+    const slot = this.slotKey(arg);
+    if (!slot) return this.log(`Slot must be one of: ${SLOTS.join(", ")}. (Tab cycles them.)`, "error");
     const item = this.player.equipment[slot];
     if (!item) return this.log("That slot is already empty.", "system");
     this.player.equipment[slot] = null;
@@ -516,6 +584,7 @@ class Game {
       const item = generateItem(this.data, this.rng, { ilvl: enemy.level, luck: this.player.attrs.luck, rarityBias: bias, classId: this.player.classId });
       this.player.addItem(item);
       this.log(`Loot: ${itemNameHtml(item, this.data)} ${this.data.slots[item.slot].label}`, "loot");
+      this.celebrateDrop(item);
     }
   }
 
@@ -565,6 +634,7 @@ class Game {
     if (!res.ok) return this.log(res.message, "error");
     this.log(esc(res.text), "system");
     this.term.printLines(res.lines.map((l) => ({ msg: l.item ? `${l.msg.replace(esc(l.item.name), itemNameHtml(l.item, this.data))}` : l.msg, cls: l.cls })));
+    for (const l of res.lines) if (l.item) this.celebrateDrop(l.item);
     if (res.leveled) this.log(`★ LEVEL UP! Now level ${res.leveled.leveledTo}. ★`, "gold");
 
     const fight = res.fight;
@@ -598,6 +668,24 @@ class Game {
     this.log("Core loop: <b>hunt</b> for fights & events, loot drops, <b>equip</b> upgrades, <b>forge</b>/<b>enchant</b> to power them up, <b>shop</b> to spend gold, <b>rest</b> to heal.", "system");
     this.log("In combat: <b>attack</b>, <b>ability</b>, <b>use &lt;n&gt;</b>, <b>flee</b>.", "system");
     this.log("Optional AI flavor: <b>ai &lt;provider&gt; &lt;key&gt;</b> (gemini/groq/openrouter). " + this.ai.status(), "cmd-desc-line");
+    this.log("Tip: press <b>Tab</b> to autocomplete commands, slots and zones. See <b>credits</b>.", "cmd-desc-line");
+  }
+
+  cmdCredits() {
+    this.term.rule("CREDITS");
+    this.log("✦ <b style='color:var(--highlight)'>DAMASCUS REIGN</b> — Reign of Iron and Dust ✦", "");
+    this.term.blank();
+    this.log("<b>apxvasili</b> — creator", "gold");
+    this.log("  Original concept &amp; game design. Authored the world data: the", "cmd-desc-line");
+    this.log("  item rarity system (F→X tiers, prefixes &amp; suffixes), the item", "cmd-desc-line");
+    this.log("  word-banks, the 20 zones and the bestiary.", "cmd-desc-line");
+    this.term.blank();
+    this.log("<b>Claude (Opus 4.8)</b> — engineering", "info");
+    this.log("  Full frontend &amp; backend: the engine, combat, classes,", "cmd-desc-line");
+    this.log("  procedural item generation, forging, enchanting, encounters,", "cmd-desc-line");
+    this.log("  the optional AI narrator, saves and the terminal UI.", "cmd-desc-line");
+    this.term.blank();
+    this.log("Built with Claude Code. No LARP — credit where it's due.", "system");
   }
 
   cmdAI(args) {

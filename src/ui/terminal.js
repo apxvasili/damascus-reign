@@ -61,9 +61,39 @@ export class Terminal {
     this.output.scrollTop = this.output.scrollHeight;
   }
 
+  /** Provide a completion function: completer(line) -> array of full-line candidates. */
+  setCompleter(fn) {
+    this.completer = fn;
+  }
+
+  _handleTab() {
+    if (!this.completer) return;
+    const line = this.input.value;
+    // Repeated Tab on an unchanged, already-completed line cycles candidates.
+    if (this._comp && this._comp.applied === line && this._comp.matches.length > 1) {
+      this._comp.idx = (this._comp.idx + 1) % this._comp.matches.length;
+      this.input.value = this._comp.matches[this._comp.idx];
+      this._comp.applied = this.input.value;
+      return;
+    }
+    const matches = this.completer(line) ?? [];
+    if (!matches.length) return;
+    this._comp = { matches, idx: 0, applied: matches[0] };
+    this.input.value = matches[0];
+  }
+
   /** Wire the input line. `handler(line)` is called on Enter. */
   bind(handler) {
     this.input.addEventListener("keydown", (e) => {
+      if (e.key === "Tab") {
+        e.preventDefault();
+        this._handleTab();
+        return;
+      }
+      // Any other key invalidates the active completion cycle.
+      if (e.key !== "Shift" && e.key !== "Control" && e.key !== "Meta" && e.key !== "Alt") {
+        this._comp = null;
+      }
       if (e.key === "Enter") {
         const value = this.input.value;
         this.input.value = "";
@@ -93,6 +123,32 @@ export class Terminal {
     document.addEventListener("click", (e) => {
       if (!e.target.closest("a,button,input")) this.focus();
     });
+  }
+
+  /**
+   * Fire a rarity drop celebration. `flash` tints the screen; `intense` adds a
+   * full banner. The top tiers (X / SSS) get extra-unhinged variants via CSS.
+   */
+  dropFx({ tier, label, color, name, flash = true, intense = false }) {
+    if (flash) {
+      const f = document.createElement("div");
+      f.className = "drop-flash";
+      f.style.setProperty("--c", color);
+      document.body.appendChild(f);
+      setTimeout(() => f.remove(), 1300);
+    }
+    if (!intense) return;
+    const variant = tier === "X" ? " drop-x" : tier === "SSS" ? " drop-sss" : tier === "SS" ? " drop-ss" : "";
+    const b = document.createElement("div");
+    b.className = `drop-banner${variant}`;
+    b.style.setProperty("--c", color);
+    b.innerHTML =
+      `<div class="db-tier">${tier}</div>` +
+      `<div class="db-label">${escapeText(label)} DROP</div>` +
+      `<div class="db-name">${escapeText(name)}</div>`;
+    document.body.appendChild(b);
+    setTimeout(() => b.classList.add("out"), 2300);
+    setTimeout(() => b.remove(), 3100);
   }
 }
 
