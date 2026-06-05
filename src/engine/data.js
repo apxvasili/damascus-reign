@@ -15,6 +15,7 @@ const FILES = {
   forge: "./data/forge.json",
   difficulties: "./data/difficulties.json",
   skills: "./data/skills.json",
+  mining: "./data/mining.json",
   version: "./data/version.json",
 };
 

@@ -22,8 +22,9 @@ import { rollEvent, resolveChoice, narrationPrompt } from "./systems/encounters.
 import { SaveManager } from "./systems/save.js";
 import { AINarrator, PROVIDERS } from "./systems/ai.js";
 import { allSkills, skillById, skillStatus, unlockSkill, applySkillMods } from "./systems/skills.js";
+import * as Mining from "./systems/mining.js";
 
-const STATE = { MENU: "MENU", IDLE: "IDLE", COMBAT: "COMBAT", ENCOUNTER: "ENCOUNTER", BUSY: "BUSY", SKILLS: "SKILLS" };
+const STATE = { MENU: "MENU", IDLE: "IDLE", COMBAT: "COMBAT", ENCOUNTER: "ENCOUNTER", BUSY: "BUSY", SKILLS: "SKILLS", MINE: "MINE" };
 
 // Human slot labels (as shown by `gear`) map back to their internal slot key, so
 // `unequip feet` works as well as `unequip boots`.
@@ -63,6 +64,8 @@ class Game {
     if (state === STATE.MENU) return `You must load or create a character first. Try "help".`;
     if (state === STATE.COMBAT) return `You're in combat! Valid: attack, ability, use <n>, flee.`;
     if (state === STATE.ENCOUNTER) return `Resolve the encounter first — pick a number (e.g. "1").`;
+    if (state === STATE.SKILLS) return `You're in the skill tree — unlock <n> or back.`;
+    if (state === STATE.MINE) return `You're in the mine — dig, craft, smelt, ores, upgrade, or leave.`;
     if (state === STATE.BUSY) return `You're occupied right now…`;
     return `That command isn't available right now.`;
   }
@@ -105,6 +108,7 @@ class Game {
     if (this.state === STATE.COMBAT) this.panels.setHeader(`COMBAT — ${this.combat.enemy.name}`, true);
     else if (this.state === STATE.ENCOUNTER) this.panels.setHeader(this.encounter.event.title.toUpperCase());
     else if (this.state === STATE.SKILLS) this.panels.setHeader("SKILL TREE");
+    else if (this.state === STATE.MINE) this.panels.setHeader(`THE MINE — depth ${this.player.mineDepth}m`);
     else this.panels.setHeader(zone ? zone.name : "THE WILDS");
     this.term.setPrompt(`${this.player.name}:>`);
   }
@@ -166,7 +170,17 @@ class Game {
     // --- skills ---
     r.register({ name: "skills", aliases: ["tree", "talents"], desc: "Open the skill tree.", group: "Skills", states: [STATE.IDLE], run: () => this.cmdSkills() });
     r.register({ name: "unlock", usage: "unlock <n>", desc: "Unlock a skill.", group: "Skills", states: [STATE.SKILLS], run: (a) => this.cmdUnlock(a) });
-    r.register({ name: "back", aliases: ["exit", "leave"], desc: "Leave the skill tree.", group: "Skills", states: [STATE.SKILLS], run: () => this.cmdBackFromSkills() });
+
+    // --- mine ---
+    r.register({ name: "mine", desc: "Enter the mine.", group: "Mine", states: [STATE.IDLE], run: () => this.cmdMine() });
+    r.register({ name: "dig", aliases: ["swing"], desc: "Swing your pickaxe for ore.", group: "Mine", states: [STATE.MINE], run: () => this.cmdDig() });
+    r.register({ name: "ores", aliases: ["satchel"], desc: "List your ore satchel.", group: "Mine", states: [STATE.MINE], run: () => this.cmdOres() });
+    r.register({ name: "smelt", usage: "smelt <ore|all>", aliases: ["sellore"], desc: "Sell ore for gold.", group: "Mine", states: [STATE.MINE], run: (a) => this.cmdSmelt(a) });
+    r.register({ name: "upgrade", aliases: ["forge-pick"], desc: "Forge the next pickaxe tier.", group: "Mine", states: [STATE.MINE], run: () => this.cmdUpgradePick() });
+    r.register({ name: "craft", usage: "craft <ore> [slot]", desc: "Smith gear from ore.", group: "Mine", states: [STATE.MINE], run: (a) => this.cmdCraftGear(a) });
+
+    // leave/back exits either the skill tree or the mine
+    r.register({ name: "back", aliases: ["exit", "leave"], desc: "Leave this view.", group: "Skills", states: [STATE.SKILLS, STATE.MINE], run: () => this.cmdLeaveView() });
 
     // --- crafting & economy ---
     r.register({ name: "forge", usage: "forge <n|slot>", desc: "Enhance an item (+N).", group: "Forge", states: [STATE.IDLE], run: (a) => this.cmdForge(a) });
@@ -210,10 +224,15 @@ class Game {
         const s = this.save.summary(n);
         this.log(`  • <b>${esc(n)}</b> — Lvl ${s.level} ${s.className} ${this.diffTag(s.difficulty, s.hardcore)} <span class="cmd-desc">(${s.kills} kills)</span>`);
       }
-      this.log(`Type <b>load &lt;name&gt;</b> to continue, or <b>new &lt;class&gt; &lt;name&gt;</b> to begin.`, "system");
+      this.log(`Continue with <b>load &lt;name&gt;</b>, or start anew:`, "system");
+      this.log(`<b>new &lt;class&gt; &lt;name&gt; [difficulty] [hardcore]</b>`, "gold");
+      this.log(`  difficulty: ${this.data.difficulties.levels.map((d) => d.id).join(" / ")} (default ${this.data.difficulties.default}) · add <b>hardcore</b> for permadeath.`, "cmd-desc-line");
+      this.log(`  See <b>classes</b> and <b>difficulties</b> for details.`, "cmd-desc-line");
     } else {
-      this.log("No chronicles yet. Begin one with <b>new &lt;class&gt; &lt;name&gt;</b>.", "system");
-      this.log(`See your options with <b>classes</b>.`, "system");
+      this.log("No chronicles yet. Begin one with:", "system");
+      this.log(`<b>new &lt;class&gt; &lt;name&gt; [difficulty] [hardcore]</b>`, "gold");
+      this.log(`  difficulty: ${this.data.difficulties.levels.map((d) => d.id).join(" / ")} (default ${this.data.difficulties.default}) · add <b>hardcore</b> for permadeath.`, "cmd-desc-line");
+      this.log(`  Browse <b>classes</b> and <b>difficulties</b> first.`, "cmd-desc-line");
     }
     this.refresh();
   }
@@ -256,6 +275,7 @@ class Game {
     this.player.difficulty = difficulty;
     this.player.hardcore = hardcore;
     this.player.skillPoints = 1; // a taster point to spend immediately
+    this.player.pickaxe = Mining.startingPickaxe(this.data);
     grantStartingKit(this.player, this.data, this.rng);
     applySkillMods(this.player, this.data);
     this.save.save(this.player);
@@ -275,6 +295,7 @@ class Game {
     const p = this.save.load(name);
     if (!p) return this.log(`No chronicle named "${esc(name)}".`, "error");
     this.player = p;
+    if (!this.player.pickaxe) this.player.pickaxe = Mining.startingPickaxe(this.data); // pre-mining saves
     applySkillMods(this.player, this.data); // re-aggregate passives from unlocked skills
     this.state = STATE.IDLE;
     this.term.clear();
@@ -430,6 +451,11 @@ class Game {
       options = ["gemini", "groq", "openrouter", "status", "off"];
     } else if (cmd === "load" || cmd === "delete") {
       options = this.save.names();
+    } else if (cmd === "smelt") {
+      options = ["all", ...this.data.mining.ores.filter((o) => this.player && Mining.oreCount(this.player, o.id) > 0).map((o) => o.id)];
+    } else if (cmd === "craft") {
+      if (parts.length <= 2) options = this.data.mining.ores.map((o) => o.id);
+      else options = SLOTS;
     }
 
     const matched = options.filter((o) => o.toLowerCase().startsWith(argPrefix));
@@ -620,6 +646,8 @@ class Game {
 
   endCombat(outcome) {
     const enemy = this.combat.enemy;
+    const wasMine = this.mineFight;
+    this.mineFight = false;
     if (outcome === "victory") {
       const mods = this.diffMods();
       this.player.kills++;
@@ -629,19 +657,34 @@ class Game {
       this.player.gold += goldGain;
       this.log(`You gain ${xpGain} XP and ${goldGain} gold.`, "success");
       this.rollDrops(enemy, mods);
+      if (wasMine) this.grantMineBossOre();
       if (r) {
         this.log(`★ LEVEL UP! You are now level ${r.leveledTo}. (+${r.skillPoints} skill point${r.skillPoints > 1 ? "s" : ""} — type skills) ★`, "gold");
       }
-      this.state = STATE.IDLE;
       this.combat = null;
       this.save.save(this.player);
-    } else if (outcome === "fled") {
+      if (wasMine && this.player.isAlive()) { this.state = STATE.MINE; this.refresh(); return this.renderMine(); }
       this.state = STATE.IDLE;
+    } else if (outcome === "fled") {
       this.combat = null;
+      if (wasMine) { this.state = STATE.MINE; this.refresh(); return this.renderMine(); }
+      this.state = STATE.IDLE;
     } else if (outcome === "defeat") {
       this.handleDefeat(enemy);
     }
     this.refresh();
+  }
+
+  /** A slain mine guardian disgorges a haul of ore the player can already reach. */
+  grantMineBossOre() {
+    const p = this.player;
+    const reach = Mining.tierIndex(this.data, p.pickaxe.reach);
+    const pool = this.data.mining.ores.filter((o) => Mining.tierIndex(this.data, o.tier) <= reach && o.minDepth <= p.mineDepth);
+    if (!pool.length) return;
+    const ore = this.rng.weighted(pool.map((o) => ({ o, w: 1 + Mining.tierIndex(this.data, o.tier) })), (e) => e.w).o;
+    const n = this.data.mining.boss.oreReward;
+    Mining.addOre(p, ore.id, n);
+    this.log(`The guardian's hoard yields <b style="color:${ore.color}">${n}× ${ore.name}</b>!`, "loot");
   }
 
   rollDrops(enemy, mods = this.diffMods()) {
@@ -746,6 +789,7 @@ class Game {
     if (p.lifesteal) this.log(`Lifesteal ${Math.round(p.lifesteal * 100)}%`);
     this.log(`Gold ${p.gold} · Shards ${p.shards} · Essence ${p.essence}`);
     this.log(`Difficulty ${this.diffTag(p.difficulty, p.hardcore)} · Skill points ${p.skillPoints} (${p.skills.length} unlocked)`);
+    if (p.pickaxe) this.log(`Pickaxe ${esc(p.pickaxe.name)} · Mine depth ${p.mineDepth}m · Ore value ${Mining.satchelValue(this.data, p)}g`);
     this.log(`Ability — <b>${p.classDef.ability.name}</b>: ${esc(p.classDef.ability.desc)}`, "cmd-desc-line");
   }
 
@@ -815,11 +859,134 @@ class Game {
     }
   }
 
+  cmdLeaveView() {
+    if (this.state === STATE.MINE) return this.cmdLeaveMine();
+    return this.cmdBackFromSkills();
+  }
+
   cmdBackFromSkills() {
     this.state = STATE.IDLE;
     this.term.clear();
     this.log("You close the tome of talents.", "system");
     this.cmdLook();
+  }
+
+  // =================== THE MINE ===================
+  cmdMine() {
+    this.state = STATE.MINE;
+    this.renderMine();
+  }
+
+  renderMine() {
+    const p = this.player;
+    this.term.clear();
+    this.term.rule("THE MINE");
+    const pick = p.pickaxe;
+    this.log(`Pickaxe: <b>${esc(pick.name)}</b> <span class="cmd-desc">(power ${pick.power}, reaches ${pick.reach}-tier ore)</span> · Depth: <b>${p.mineDepth}m</b>`, "");
+    const owned = this.data.mining.ores.filter((o) => Mining.oreCount(p, o.id) > 0);
+    if (owned.length) {
+      this.log("Satchel: " + owned.map((o) => `<span style="color:${o.color}">${o.name} ×${Mining.oreCount(p, o.id)}</span>`).join(" · "), "");
+    } else {
+      this.log("Satchel: <span class='muted'>empty</span>", "");
+    }
+    this.log(`<span class="cmd-desc">dig · ores · smelt &lt;ore|all&gt; · upgrade · craft &lt;ore&gt; [slot] · leave</span>`);
+  }
+
+  cmdDig() {
+    const p = this.player;
+    const res = Mining.digOnce(this.data, this.rng, { depth: p.mineDepth, pickaxe: p.pickaxe, luck: p.attrs.luck });
+    p.mineDepth = Math.min(this.data.mining.maxDepth, p.mineDepth + this.data.mining.depthPerDig);
+
+    if (res.ore) {
+      Mining.addOre(p, res.ore.id, res.count);
+      this.log(`⛏ You unearth <b style="color:${res.ore.color}">${res.ore.count > 1 ? "" : ""}${res.count}× ${esc(res.ore.name)}</b> <span class="cmd-desc">[${res.ore.tier}]</span>.`, "loot");
+      if (Mining.tierIndex(this.data, res.ore.tier) >= 5) this.term.dropFx({ tier: res.ore.tier, label: `${res.ore.name.toUpperCase()}`, color: res.ore.color, name: `${res.count}× ${res.ore.name}`, intense: Mining.tierIndex(this.data, res.ore.tier) >= 7 });
+    } else {
+      this.log("⛏ Your pickaxe bites only barren rock.", "system");
+    }
+
+    // boss ambush deepens with depth
+    if (this.rng.chance(Mining.bossChance(this.data, p.mineDepth))) {
+      this.save.save(p);
+      this.log("The rock splits — something vast stirs in the dark!", "enemy");
+      this.mineFight = true;
+      this.startCombat(Mining.makeMineGuardian(this.data, this.rng, p, p.mineDepth, this.diffMods()));
+      return;
+    }
+    this.save.save(p);
+    this.refresh();
+  }
+
+  cmdOres() {
+    const p = this.player;
+    this.term.rule("ORE SATCHEL");
+    const owned = this.data.mining.ores.filter((o) => Mining.oreCount(p, o.id) > 0);
+    if (!owned.length) return this.log("Your satchel is empty. Go <b>dig</b>.", "system");
+    for (const o of owned) {
+      const n = Mining.oreCount(p, o.id);
+      this.log(`<span style="color:${o.color}">${esc(o.name)}</span> <span class="cmd-desc">[${o.tier}]</span> ×${n} <span class="msg-gold">(${o.value * n}g)</span>`);
+    }
+    this.log(`Total value: <span class="msg-gold">${Mining.satchelValue(this.data, p)}g</span> · <span class="cmd-desc">smelt &lt;ore|all&gt;</span>`);
+  }
+
+  cmdSmelt(arg) {
+    arg = (arg ?? "").trim().toLowerCase();
+    if (!arg) return this.log("Smelt which ore? Use an ore id or <b>all</b>.", "error");
+    const res = arg === "all" ? Mining.sellAllOre(this.player, this.data) : Mining.sellOre(this.player, this.data, this.resolveOreId(arg));
+    this.log(res.message, res.ok ? "gold" : "error");
+    if (res.ok) { this.save.save(this.player); this.renderMine(); }
+  }
+
+  cmdUpgradePick() {
+    const info = Mining.pickaxeCraftInfo(this.data, this.player);
+    if (info.atMax) return this.log("Your pickaxe is already the finest ever forged.", "system");
+    this.log(`Next: <b>${esc(info.next.name)}</b> — needs ${info.count}× ${info.ore.name} (have ${info.haveOre}) + ${info.gold}g.`, "cmd-desc-line");
+    const res = Mining.craftPickaxe(this.player, this.data);
+    this.log(res.message, res.ok ? "success" : "error");
+    if (res.ok) { this.save.save(this.player); this.renderMine(); }
+  }
+
+  cmdCraftGear(args) {
+    const parts = (args ?? "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) {
+      this.term.rule("ORE SMITHING");
+      this.log("Forge gear from ore — its rarity matches the ore's tier.", "cmd-desc-line");
+      for (const o of this.data.mining.ores) {
+        const cost = Mining.gearCraftCost(this.data, o);
+        const have = Mining.oreCount(this.player, o.id);
+        const ok = have >= cost.ore && this.player.gold >= cost.gold;
+        this.log(`<span style="color:${o.color}">${esc(o.name)}</span> <span class="cmd-desc">[${o.tier}]</span> → ${cost.ore}× + ${cost.gold}g ${ok ? '<span class="msg-success">✓</span>' : `<span class="muted">(have ${have})</span>`}`);
+      }
+      this.log(`<span class="cmd-desc">craft &lt;ore&gt; [slot] — e.g. craft iron weapon</span>`);
+      return;
+    }
+    const oreId = this.resolveOreId(parts[0]);
+    const slot = parts[1] ? this.slotKey(parts[1]) : undefined;
+    if (parts[1] && !slot) return this.log(`Unknown slot "${esc(parts[1])}". Options: ${SLOTS.join(", ")}.`, "error");
+    const res = Mining.craftGear(this.player, this.data, this.rng, oreId, slot);
+    if (res.ok) {
+      this.log(res.message, "loot");
+      this.celebrateDrop(res.item);
+      this.save.save(this.player);
+      this.renderMine();
+    } else {
+      this.log(res.message, "error");
+    }
+  }
+
+  cmdLeaveMine() {
+    this.state = STATE.IDLE;
+    this.term.clear();
+    this.log("You climb back into the daylight.", "system");
+    this.cmdLook();
+  }
+
+  /** Match an ore by id or a case-insensitive name fragment. */
+  resolveOreId(arg) {
+    arg = (arg ?? "").trim().toLowerCase();
+    if (this.data.mining.ores.some((o) => o.id === arg)) return arg;
+    const byName = this.data.mining.ores.find((o) => o.name.toLowerCase().includes(arg));
+    return byName ? byName.id : arg;
   }
 
   // =================== UPDATES ===================
@@ -868,6 +1035,7 @@ class Game {
     this.term.rule("HELP");
     this.log("Type commands at the prompt. The Codex on the right lists everything.", "system");
     this.log("Core loop: <b>hunt</b> for fights & events, loot drops, <b>equip</b> upgrades, <b>forge</b>/<b>enchant</b> to power them up, <b>shop</b> to spend gold, <b>rest</b> to heal.", "system");
+    this.log("Also: <b>skills</b> (spend level-up points) · <b>mine</b> (dig ore, craft pickaxes & gear).", "system");
     this.log("In combat: <b>attack</b>, <b>ability</b>, <b>use &lt;n&gt;</b>, <b>flee</b>.", "system");
     this.log("Optional AI flavor: <b>ai &lt;provider&gt; &lt;key&gt;</b> (gemini/groq/openrouter). " + this.ai.status(), "cmd-desc-line");
     this.log("Tip: press <b>Tab</b> to autocomplete commands, slots and zones. See <b>credits</b>.", "cmd-desc-line");

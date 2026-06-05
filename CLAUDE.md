@@ -28,6 +28,10 @@ dispatching a `keydown` Enter event, then read `#output`/`#stats-content`.
   `recalc()`). Call it after load/unlock. 1 point per level.
 - Difficulty/hardcore are locked at creation. `Game.diffMods()` returns the
   combined mob/loot/xp/gold multipliers; applied in `makeEnemy`, rewards, drops.
+- Mining (`systems/mining.js`): `player.ores` (id→count), `player.pickaxe`,
+  `player.mineDepth`. `MINE` state; `dig` can trigger `makeMineGuardian` (scaled
+  to player level, set `this.mineFight` so `endCombat` returns to the mine).
+  Crafted gear rarity == ore tier; pickaxes form a craft ladder via `craft.req`.
 - **Bump `data/version.json` `version` on every deploy** — the `update` command
   and outdated-client nudge depend on it.
 
