@@ -24,16 +24,22 @@ function statLine(key, val, data) {
   return `<span class="stat-label">${label}</span> <span class="stat-val">${shown}</span>`;
 }
 
-/** Item name colored by rarity. */
+/**
+ * Item name colored by rarity, prefixed with its tier badge (e.g. [X]).
+ * The `rarity-<tier>` class drives the per-rarity CSS animations.
+ */
 export function itemNameHtml(item, data) {
   if (item.kind === "consumable") return `<span class="item-consumable">${esc(item.name)}</span>`;
-  const color = colorOf(item, data);
-  return `<span style="color:${color}; font-weight:bold;">${esc(item.name)}</span>`;
+  const r = rarityOf(item, data);
+  const color = r?.color ?? colorOf(item, data);
+  const tier = r?.tier ?? "?";
+  return `<span class="item-name rarity-${tier}" style="--rc:${color}; color:${color}">` +
+         `<span class="rarity-badge">${tier}</span> ${esc(item.name)}</span>`;
 }
 
 export function rarityTag(item, data) {
   const r = rarityOf(item, data);
-  return r ? `<span style="color:${r.color}">[${r.tier} · ${r.label}]</span>` : "";
+  return r ? `<span style="color:${r.color}">${r.label}</span>` : "";
 }
 
 /** Compact one-liner for inventory/shop lists. `idx` is an optional handle. */
