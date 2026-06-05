@@ -28,6 +28,7 @@ classes / difficulties              list classes / difficulty modes
 hunt                   seek danger — a fight or a random event
 attack / ability / flee   combat actions (ability = your class skill)
 skills / unlock 3      open the skill tree, spend a point
+mine                   enter the mine (then: dig, craft, smelt, upgrade, leave)
 inventory              list your bag (items are numbered)
 equip 6                equip inventory item #6
 inspect weapon         examine an item (compares vs equipped)
@@ -56,6 +57,7 @@ runs death isn't permanent (respawn, lose some gold); on **Hardcore** it is.
 | **Difficulty** | Tender → Tempered → Brutal → Damascus: scale mob HP/damage, loot, XP & gold. Chosen at creation, shown next to your name |
 | **Hardcore** | Optional permadeath layer with boosted loot & XP — one life, richer spoils |
 | **Skill tree** | 28 passive skills across 4 branches (Might / Bulwark / Fortune / Arsenal); 1 point per level, prerequisite chains |
+| **Mining** | `dig` ore (10 tiers `F→X`) that gets rarer the deeper you go; craft a pickaxe ladder (each reaches one rarity higher), smith gear whose rarity matches the ore, smelt ore for gold, and survive guardian ambushes |
 | **Loot** | Procedural gear, **10 rarity tiers** (`F→X`) with tier badges & escalating drop animations, 9 slots, rollable affixes |
 | **Combat** | Turn-based, crits, dodge, lifesteal, elemental matchups (burn / chill / shock / wither), bosses |
 | **Forging** | `+N` enhancement with rising risk |
@@ -99,11 +101,12 @@ monster, affix, event, or shop item by editing `data/*.json`, no code required.
 index.html            shell — layout + mounts the app
 styles/main.css        styling + CRT / animation effects
 data/*.json            zones, monsters, item word-banks, rarities, affixes,
-                       classes, events, shop, forge, difficulties, skills, version
+                       classes, events, shop, forge, difficulties, skills,
+                       mining, version
 src/
   engine/   rng · data loader · Player state · command registry
   systems/  items · classes · combat · forge · enchant · shop · encounters ·
-            skills · ai · save
+            skills · mining · ai · save
   ui/       terminal · panels · render helpers
   main.js   orchestrator — state machine + command wiring
 ```

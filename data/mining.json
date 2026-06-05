@@ -1,0 +1,45 @@
+{
+  "note": "The Mine. Each `dig` rolls an ore the pickaxe can reach (by tier) at the current depth, then deepens you slightly. Rarer ore (higher tier, deeper, better pickaxe, more luck) sells for more and crafts rarer gear. Bosses can ambush deep digs.",
+  "depthPerDig": 1,
+  "maxDepth": 120,
+  "ores": [
+    { "id": "copper",     "name": "Copper Ore",     "tier": "F",   "color": "#b87333", "value": 3,    "minDepth": 0,  "weight": 200 },
+    { "id": "iron",       "name": "Iron Ore",       "tier": "E",   "color": "#a8a29e", "value": 6,    "minDepth": 0,  "weight": 150 },
+    { "id": "silver",     "name": "Silver Ore",     "tier": "D",   "color": "#e8e8ec", "value": 12,   "minDepth": 3,  "weight": 100 },
+    { "id": "goldore",    "name": "Gold Ore",       "tier": "C",   "color": "#f2c14e", "value": 24,   "minDepth": 6,  "weight": 60  },
+    { "id": "sapphire",   "name": "Sapphire",       "tier": "B",   "color": "#4aa3ff", "value": 55,   "minDepth": 10, "weight": 32  },
+    { "id": "ruby",       "name": "Ruby",           "tier": "A",   "color": "#e0507a", "value": 120,  "minDepth": 15, "weight": 16  },
+    { "id": "mithril",    "name": "Mithril Ore",    "tier": "S",   "color": "#5fd0c5", "value": 280,  "minDepth": 22, "weight": 7   },
+    { "id": "adamantite", "name": "Adamantite",     "tier": "SS",  "color": "#ff6a4d", "value": 640,  "minDepth": 30, "weight": 3   },
+    { "id": "obsidian",   "name": "Voidstone",      "tier": "SSS", "color": "#b06bff", "value": 1500, "minDepth": 42, "weight": 1   },
+    { "id": "stardust",   "name": "Stardust",       "tier": "X",   "color": "#43f7e6", "value": 4200, "minDepth": 58, "weight": 0.3 }
+  ],
+  "pickaxes": [
+    { "id": "wood",        "name": "Wooden Pickaxe",    "tier": 0, "power": 1,  "reach": "E",   "craft": null },
+    { "id": "stone",       "name": "Stone Pickaxe",     "tier": 1, "power": 2,  "reach": "D",   "craft": { "req": "wood",        "ore": "copper",     "count": 8,  "gold": 40 } },
+    { "id": "bronze",      "name": "Bronze Pickaxe",    "tier": 2, "power": 3,  "reach": "C",   "craft": { "req": "stone",       "ore": "iron",       "count": 10, "gold": 90 } },
+    { "id": "iron_pick",   "name": "Iron Pickaxe",      "tier": 3, "power": 4,  "reach": "B",   "craft": { "req": "bronze",      "ore": "silver",     "count": 12, "gold": 180 } },
+    { "id": "steel",       "name": "Steel Pickaxe",     "tier": 4, "power": 6,  "reach": "A",   "craft": { "req": "iron_pick",   "ore": "goldore",    "count": 14, "gold": 320 } },
+    { "id": "mithril_pick","name": "Mithril Pickaxe",   "tier": 5, "power": 8,  "reach": "S",   "craft": { "req": "steel",       "ore": "sapphire",   "count": 16, "gold": 600 } },
+    { "id": "adamant",     "name": "Adamant Pickaxe",   "tier": 6, "power": 11, "reach": "SS",  "craft": { "req": "mithril_pick","ore": "ruby",       "count": 18, "gold": 1100 } },
+    { "id": "runic",       "name": "Runic Pickaxe",     "tier": 7, "power": 15, "reach": "SSS", "craft": { "req": "adamant",     "ore": "mithril",    "count": 20, "gold": 2000 } },
+    { "id": "void",        "name": "Void Pickaxe",      "tier": 8, "power": 20, "reach": "X",   "craft": { "req": "runic",       "ore": "adamantite", "count": 24, "gold": 4000 } }
+  ],
+  "gear": {
+    "note": "Crafting gear from ore yields an item whose rarity equals the ore's tier, at the player's level. The rarer the ore, the rarer (and costlier) the gear.",
+    "oreCostBase": 5,
+    "oreCostPerTier": 1,
+    "goldBase": 30,
+    "goldPerTier": 30
+  },
+  "boss": {
+    "baseChance": 0.05,
+    "depthChance": 0.004,
+    "maxChance": 0.32,
+    "hpMult": 1.6,
+    "atkMult": 1.35,
+    "rewardMult": 2.0,
+    "oreReward": 6,
+    "monsters": ["ore_elemental", "gemstone_crawler", "geode_golem", "motherlode_behemoth", "crystal_back_tortoise", "amethyst_golem", "stone_raptor", "earth_elemental_servant"]
+  }
+}

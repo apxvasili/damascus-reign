@@ -39,6 +39,11 @@ export class Player {
     this.skillPoints = 0;
     this.skillMods = {};       // aggregated passive bonuses (transient — recomputed from skills)
 
+    // Mining.
+    this.ores = {};            // oreId -> count
+    this.pickaxe = null;       // set by the mining system (starting pickaxe)
+    this.mineDepth = 0;
+
     // Snapshot the class definition we need at runtime so saves are self-contained.
     this._class = classDef;
     this.hp = 1;
@@ -186,6 +191,9 @@ export class Player {
       hardcore: this.hardcore,
       skills: this.skills,
       skillPoints: this.skillPoints,
+      ores: this.ores,
+      pickaxe: this.pickaxe,
+      mineDepth: this.mineDepth,
     };
   }
 
@@ -206,6 +214,9 @@ export class Player {
       skills: raw.skills ?? [],
       // Pre-skill-tree saves get retroactive points so they're not penalized.
       skillPoints: raw.skillPoints ?? Math.max(0, (raw.level ?? 1) - 1),
+      ores: raw.ores ?? {},
+      pickaxe: raw.pickaxe ?? null, // caller grants a starting pickaxe if null
+      mineDepth: raw.mineDepth ?? 0,
     });
     // skillMods are re-aggregated by the caller (needs skill data); recalc here
     // runs without them, then the caller calls recalc again after applying mods.
