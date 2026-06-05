@@ -37,7 +37,7 @@ export class SaveManager {
     const raw = this.saves[name];
     if (!raw) return null;
     const cls = getClass(this.data, raw.classId);
-    return { name, level: raw.level ?? 1, className: cls?.name ?? raw.classId, kills: raw.kills ?? 0 };
+    return { name, level: raw.level ?? 1, className: cls?.name ?? raw.classId, kills: raw.kills ?? 0, difficulty: raw.difficulty ?? "tempered", hardcore: raw.hardcore ?? false };
   }
 
   save(player) {

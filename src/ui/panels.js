@@ -30,12 +30,19 @@ export class Panels {
     const eq = player.equipment;
     const wpn = eq.weapon ? itemNameHtml(eq.weapon, data) : '<span class="muted">unarmed</span>';
 
+    const diff = data.difficulties.levels.find((d) => d.id === player.difficulty);
+    const diffTag = diff ? ` <span style="color:${diff.color}">[${diff.name}]</span>${player.hardcore ? ' <span style="color:var(--danger)">☠</span>' : ""}` : "";
+    const spLine = player.skillPoints > 0
+      ? `<div class="stat-row"><span class="stat-label">Skill pts</span> <span class="stat-val" style="color:var(--highlight)">${player.skillPoints} ◆</span></div>`
+      : "";
+
     let html = `
-      <div class="sheet-name">${player.name}</div>
+      <div class="sheet-name">${player.name}${diffTag}</div>
       <div class="sheet-sub">Lvl ${player.level} ${player.classDef.name}</div>
       <div class="meter"><span class="meter-label">HP</span> ${bar(hpPct, hpColor, 16)} <span class="meter-num">${player.hp}/${player.maxHp}</span></div>
       <div class="meter"><span class="meter-label">${player.resourceName.slice(0, 4)}</span> ${bar(resPct, "#4aa3ff", 16)} <span class="meter-num">${player.resource}/${player.resourceMax}</span></div>
       <div class="meter"><span class="meter-label">XP</span> ${bar(xpPct, "#b06bff", 16)} <span class="meter-num">${player.xp}/${player.xpToNext}</span></div>
+      ${spLine}
       <div class="divider"></div>
       <div class="stat-row"><span class="stat-label">Gold</span> <span class="stat-val msg-gold">${player.gold}</span></div>
       <div class="stat-row"><span class="stat-label">Shards</span> <span class="stat-val">${player.shards}</span></div>
