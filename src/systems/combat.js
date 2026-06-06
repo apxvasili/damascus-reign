@@ -122,10 +122,16 @@ export class CombatSession {
     if (!this.over) this._enemyTurn();
   }
 
-  playerAbility() {
+  /**
+   * Use an ability. `ab` is an ability definition (defaults to the class base).
+   * Supports kinds attack / spell / heal and optional fields: guaranteedCrit,
+   * critBonus, executeThreshold/executeMult, applyStatus (+statusChance), and
+   * healPct (hybrid heal on any kind).
+   */
+  playerAbility(ab) {
     if (this.over) return;
     const p = this.player;
-    const ab = p.classDef.ability;
+    ab = ab || p.classDef.ability;
     const power = p.abilityPower ?? 1;             // skill: ability power
     const cost = Math.max(1, Math.round(ab.cost * (1 - (p.costReduction ?? 0)))); // skill: cheaper
     if (p.resource < cost) {
@@ -134,38 +140,38 @@ export class CombatSession {
     }
     this.turn++;
     p.resource -= cost;
+    this.log(`✦ ${ab.name}!`, "ability");
 
-    if (ab.kind === "attack") {
-      const base = p.attackPower * ab.mult * power;
-      let crit = false;
-      let value;
-      if (ab.guaranteedCrit) {
-        crit = true;
-        value = Math.round(base * (p.critMult + (ab.critBonus ?? 0)));
-      } else {
-        value = Math.round(base);
-      }
-      let dmg = value + p.elemDmg;
-      const effMult = p.element !== "physical" ? this.effectiveness(p.element, this.enemy.element) : 1;
-      dmg = Math.round(dmg * effMult);
-      this.log(`✦ ${ab.name}!`, "ability");
-      this._dealToEnemy(dmg, { crit, effMult, element: p.element, label: "It lands" });
-    } else if (ab.kind === "spell") {
-      const scaleVal = p.attrs[ab.scale] ?? 0;
-      const raw = Math.round((scaleVal * ab.mult + p.elemDmg) * power);
-      const effMult = this.effectiveness(ab.element, this.enemy.element);
-      const dmg = Math.round(raw * effMult);
-      this.log(`✦ ${ab.name}!`, "ability");
-      // Spells ignore enemy defense.
-      this._dealToEnemy(dmg, { crit: false, effMult, element: ab.element, label: "Arcane force tears in", ignoreDef: true });
-    } else if (ab.kind === "heal") {
+    // optional heal component (kind "heal" or any ability with healPct)
+    if (ab.healPct) {
       const healed = Math.round(p.maxHp * ab.healPct);
       p.heal(healed);
-      this.log(`✦ ${ab.name}! You recover ${healed} HP.`, "heal");
-      const scaleVal = p.attrs[ab.scale] ?? 0;
-      const raw = Math.round(scaleVal * ab.mult * power);
-      const effMult = this.effectiveness(ab.element, this.enemy.element);
-      this._dealToEnemy(Math.round(raw * effMult), { crit: false, effMult, element: ab.element, label: "Holy light smites", ignoreDef: true });
+      this.log(`You channel light and recover ${healed} HP.`, "heal");
+    }
+
+    const status = ab.applyStatus ? { forceStatus: ab.applyStatus, statusChance: ab.statusChance ?? 1 } : {};
+
+    if (ab.kind === "attack") {
+      let mult = ab.mult;
+      if (ab.executeThreshold && this.enemy.hp / this.enemy.maxHp <= ab.executeThreshold) {
+        mult *= ab.executeMult ?? 1;
+        this.log(`Execution! The wound runs deep.`, "ability");
+      }
+      const base = p.attackPower * mult * power;
+      let crit = false;
+      let value;
+      if (ab.guaranteedCrit) { crit = true; value = Math.round(base * (p.critMult + (ab.critBonus ?? 0))); }
+      else value = Math.round(base);
+      const effMult = p.element !== "physical" ? this.effectiveness(p.element, this.enemy.element) : 1;
+      const dmg = Math.round((value + p.elemDmg) * effMult);
+      this._dealToEnemy(dmg, { crit, effMult, element: p.element, label: "It lands", ...status });
+    } else if (ab.kind === "spell" || ab.kind === "heal") {
+      const scaleVal = p.attrs[ab.scale ?? "int"] ?? 0;
+      const raw = Math.round((scaleVal * (ab.mult ?? 0) + p.elemDmg) * power);
+      const el = ab.element ?? "light";
+      const effMult = this.effectiveness(el, this.enemy.element);
+      const dmg = Math.round(raw * effMult);
+      if (dmg > 0) this._dealToEnemy(dmg, { crit: false, effMult, element: el, label: "Power tears in", ignoreDef: true, ...status });
     }
     if (!this.over) this._enemyTurn();
   }
@@ -199,7 +205,7 @@ export class CombatSession {
 
   // --- internals ---
 
-  _dealToEnemy(rawDmg, { crit, effMult, element, label, ignoreDef = false }) {
+  _dealToEnemy(rawDmg, { crit, effMult, element, label, ignoreDef = false, forceStatus = null, statusChance = 1 }) {
     let dmg = rawDmg;
     if (!ignoreDef) dmg = Math.max(1, Math.round(dmg * (1 - mitigation(this.enemy.defense))));
     dmg = Math.max(1, dmg);
@@ -215,8 +221,9 @@ export class CombatSession {
       this.player.heal(back);
       this.log(`You drain ${back} HP.`, "heal");
     }
-    // elemental status application
-    this._applyStatus(element, dmg);
+    // status application — forced (from an ability) or elemental (from weapon)
+    if (forceStatus) this._setStatus(forceStatus, dmg, statusChance);
+    else this._applyStatus(element, dmg);
 
     if (this.enemy.hp <= 0) {
       this.enemy.hp = 0;
@@ -225,21 +232,22 @@ export class CombatSession {
     }
   }
 
-  _applyStatus(element, dmg) {
+  /** Apply a specific status with a given chance (used by abilities). */
+  _setStatus(name, dmg, chance = 1) {
+    if (!this.rng.chance(chance)) return;
     const s = this.enemy.statuses;
-    if (element === "fire" && this.rng.chance(0.5)) {
-      s.burn = { turns: 3, dmg: Math.max(2, Math.round(dmg * 0.2)) };
-      this.log(`${this.enemy.name} is set ablaze!`, "system");
-    } else if (element === "ice" && this.rng.chance(0.5)) {
-      s.chill = { turns: 2 };
-      this.log(`${this.enemy.name} is chilled, its blows weakened.`, "system");
-    } else if (element === "lightning" && this.rng.chance(0.35)) {
-      s.shock = { turns: 2 };
-      this.log(`${this.enemy.name} is shocked and may seize up!`, "system");
-    } else if (element === "shadow" && this.rng.chance(0.4)) {
-      this.enemy.defense = Math.max(0, Math.round(this.enemy.defense * 0.85));
-      this.log(`Shadow withers ${this.enemy.name}'s guard.`, "system");
-    }
+    if (name === "burn") { s.burn = { turns: 3, dmg: Math.max(2, Math.round(dmg * 0.2)) }; this.log(`${this.enemy.name} is set ablaze!`, "system"); }
+    else if (name === "chill") { s.chill = { turns: 2 }; this.log(`${this.enemy.name} is chilled, its blows weakened.`, "system"); }
+    else if (name === "shock") { s.shock = { turns: 2 }; this.log(`${this.enemy.name} is shocked and may seize up!`, "system"); }
+    else if (name === "wither") { this.enemy.defense = Math.max(0, Math.round(this.enemy.defense * 0.85)); this.log(`${this.enemy.name}'s guard withers.`, "system"); }
+  }
+
+  /** Chance-based status from the weapon's element. */
+  _applyStatus(element, dmg) {
+    if (element === "fire") this._setStatus("burn", dmg, 0.5);
+    else if (element === "ice") this._setStatus("chill", dmg, 0.5);
+    else if (element === "lightning") this._setStatus("shock", dmg, 0.35);
+    else if (element === "shadow") this._setStatus("wither", dmg, 0.4);
   }
 
   _enemyTurn() {

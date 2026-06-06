@@ -139,6 +139,132 @@
           { "weight": 2, "text": "You find a few dropped coins on the road.", "effects": { "gold": 25 } }
         ]}
       ]
+    },
+    {
+      "id": "collapsed_tunnel",
+      "title": "A Collapsed Tunnel",
+      "weight": 8,
+      "text": "A cave-in has split the hillside open, exposing veins of raw ore glittering in the rubble.",
+      "choices": [
+        { "label": "Mine the exposed veins", "results": [
+          { "weight": 6, "text": "You chip loose a good haul before the rock settles.", "effects": { "ore": { "count": 6, "maxTier": "C" } } },
+          { "weight": 4, "text": "A rich seam — and a few gemstones!", "effects": { "ore": { "id": "sapphire", "count": 2 }, "shards": 2 } }
+        ]},
+        { "label": "Squeeze deeper inside", "results": [
+          { "weight": 5, "text": "Deeper veins yield rarer stone.", "effects": { "ore": { "id": "goldore", "count": 4 }, "gold": 20 } },
+          { "weight": 5, "text": "The dark stirs — something burrowed here was disturbed.", "effects": { "fight": true } }
+        ]},
+        { "label": "Move on", "results": [
+          { "weight": 10, "text": "Too unstable. You leave it be.", "effects": {} }
+        ]}
+      ]
+    },
+    {
+      "id": "rival_adventurer",
+      "title": "A Rival Adventurer",
+      "weight": 7,
+      "text": "Another wanderer eyes you across the trail, hand resting on their hilt. 'Trade, or test your steel?'",
+      "choices": [
+        { "label": "Trade for their wares (60g)", "cost": { "gold": 60 }, "results": [
+          { "weight": 8, "text": "They hand over a well-kept piece of gear.", "effects": { "item": 1.4 } },
+          { "weight": 2, "text": "Cheap junk wrapped in fine cloth. A con.", "effects": {} }
+        ]},
+        { "label": "Duel them", "results": [
+          { "weight": 6, "text": "They draw — steel meets steel!", "effects": { "fight": true } },
+          { "weight": 4, "text": "They blink first and toss you a coin pouch in tribute.", "effects": { "gold": 80, "xp": 30 } }
+        ]},
+        { "label": "Nod and pass", "results": [
+          { "weight": 10, "text": "Two predators, circling, then gone.", "effects": {} }
+        ]}
+      ]
+    },
+    {
+      "id": "fae_ring",
+      "title": "A Ring of Toadstools",
+      "weight": 6,
+      "text": "A perfect circle of luminous mushrooms hums with otherworldly music. Stepping in feels... inadvisable.",
+      "choices": [
+        { "label": "Dance within the ring", "results": [
+          { "weight": 5, "text": "The fae are delighted; you leave blessed and renewed.", "effects": { "hpPct": 1.0, "xp": 70 } },
+          { "weight": 3, "text": "Time slips. You wake elsewhere, dazed and lighter.", "effects": { "hpPct": -0.2, "gold": -20 } },
+          { "weight": 2, "text": "A parting gift glimmers in the grass.", "effects": { "item": 1.7 } }
+        ]},
+        { "label": "Leave an offering (25g)", "cost": { "gold": 25 }, "results": [
+          { "weight": 10, "text": "Unseen hands press essence into your palm.", "effects": { "essence": 4 } }
+        ]},
+        { "label": "Back away slowly", "results": [
+          { "weight": 10, "text": "Wise. The music fades behind you.", "effects": {} }
+        ]}
+      ]
+    },
+    {
+      "id": "old_battlefield",
+      "title": "An Old Battlefield",
+      "weight": 7,
+      "text": "Rusted arms and bleached bones litter a field where some forgotten war ended. The wind smells of iron.",
+      "choices": [
+        { "label": "Loot the fallen", "results": [
+          { "weight": 5, "text": "A serviceable weapon, still buried in a ribcage.", "effects": { "item": 1.2, "gold": 30 } },
+          { "weight": 5, "text": "The dead do not rest here.", "effects": { "fight": true } }
+        ]},
+        { "label": "Salvage scrap metal", "results": [
+          { "weight": 8, "text": "Enough good steel to be worth carrying.", "effects": { "shards": 4, "ore": { "id": "iron", "count": 4 } } }
+        ]}
+      ]
+    },
+    {
+      "id": "hot_spring",
+      "title": "A Steaming Spring",
+      "weight": 6,
+      "text": "A natural hot spring bubbles in a sheltered hollow, mist curling invitingly.",
+      "choices": [
+        { "label": "Soak and recover", "results": [
+          { "weight": 8, "text": "The heat melts away every ache.", "effects": { "hpPct": 1.0 } },
+          { "weight": 2, "text": "You doze off and wake to a lurking threat.", "effects": { "fight": true } }
+        ]},
+        { "label": "Fill your flask and go", "results": [
+          { "weight": 10, "text": "A quick drink steels your resolve.", "effects": { "hpPct": 0.4, "xp": 15 } }
+        ]}
+      ]
+    },
+    {
+      "id": "cursed_chest",
+      "title": "An Ornate Chest",
+      "weight": 7,
+      "text": "A gilded chest sits alone in a clearing, far too clean, far too convenient.",
+      "choices": [
+        { "label": "Force it open", "results": [
+          { "weight": 5, "text": "Treasure, genuine and gleaming!", "effects": { "gold": 110, "item": 1.5 } },
+          { "weight": 3, "text": "A needle-trap stings your hand.", "effects": { "hpPct": -0.18, "gold": 40 } },
+          { "weight": 4, "text": "The lid splits into a fanged maw — a mimic!", "effects": { "fight": true } }
+        ]},
+        { "label": "Pick the lock carefully", "cost": { "gold": 0 }, "results": [
+          { "weight": 6, "text": "Disarmed and emptied at your leisure.", "effects": { "gold": 70, "essence": 2 } },
+          { "weight": 4, "text": "Empty. Someone beat you to it.", "effects": {} }
+        ]},
+        { "label": "Leave it — too clean", "results": [
+          { "weight": 10, "text": "Your instincts thank you.", "effects": {} }
+        ]}
+      ]
+    },
+    {
+      "id": "star_pilgrim",
+      "title": "A Star-Touched Pilgrim",
+      "weight": 6,
+      "minLevel": 8,
+      "text": "A robed figure crowned in faint constellations regards you. 'I trade in fate, traveler. What will you barter?'",
+      "choices": [
+        { "label": "Trade gold for knowledge (90g)", "cost": { "gold": 90 }, "results": [
+          { "weight": 10, "text": "Insight floods you in a single searing instant.", "effects": { "xp": 160 } }
+        ]},
+        { "label": "Trade gold for power (120g)", "cost": { "gold": 120 }, "results": [
+          { "weight": 7, "text": "The pilgrim presses a star-forged relic into your hands.", "effects": { "item": 2.4 } },
+          { "weight": 3, "text": "The cosmos is fickle today.", "effects": { "essence": 3 } }
+        ]},
+        { "label": "Refuse the bargain", "results": [
+          { "weight": 10, "text": "'As you wish. The stars are patient.'", "effects": {} }
+        ]}
+      ]
     }
   ]
 }

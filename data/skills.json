@@ -11,7 +11,9 @@
         { "id": "might_4", "name": "Bloodlust",    "tier": 2, "cost": 2, "req": ["might_2"],           "desc": "+6% Crit Chance",        "mods": { "crit": 0.06 } },
         { "id": "might_5", "name": "Executioner",  "tier": 3, "cost": 3, "req": ["might_4"],           "desc": "+25% Crit Damage",       "mods": { "critDmg": 0.25 } },
         { "id": "might_6", "name": "Berserker",    "tier": 3, "cost": 3, "req": ["might_3"],           "desc": "+12% Damage",            "mods": { "dmgPct": 0.12 } },
-        { "id": "might_7", "name": "Warlord",      "tier": 4, "cost": 4, "req": ["might_5", "might_6"], "desc": "+6 STR and +12% Damage", "mods": { "str": 6, "dmgPct": 0.12 } }
+        { "id": "might_7", "name": "Warlord",      "tier": 4, "cost": 4, "req": ["might_5", "might_6"], "desc": "+6 STR and +12% Damage", "mods": { "str": 6, "dmgPct": 0.12 } },
+        { "id": "might_8", "name": "Rend",         "tier": 2, "cost": 2, "req": ["might_1"],           "desc": "+10% Damage",            "mods": { "dmgPct": 0.10 } },
+        { "id": "might_9", "name": "Killing Spree","tier": 4, "cost": 4, "req": ["might_7"],           "desc": "+8% Crit and +15% Crit Damage", "mods": { "crit": 0.08, "critDmg": 0.15 } }
       ]
     },
     {
@@ -23,7 +25,9 @@
         { "id": "bul_4", "name": "Evasion",       "tier": 2, "cost": 2, "req": ["bul_2"],          "desc": "+4% Dodge",               "mods": { "dodge": 0.04 } },
         { "id": "bul_5", "name": "Fortress",      "tier": 3, "cost": 3, "req": ["bul_3"],          "desc": "+15% Armor and +6% HP",   "mods": { "defPct": 0.15, "hpPct": 0.06 } },
         { "id": "bul_6", "name": "Second Wind",   "tier": 3, "cost": 3, "req": ["bul_4"],          "desc": "+5% Lifesteal",           "mods": { "lifesteal": 0.05 } },
-        { "id": "bul_7", "name": "Unbreakable",   "tier": 4, "cost": 4, "req": ["bul_5", "bul_6"], "desc": "+8 VIT and +12% Max HP",  "mods": { "vit": 8, "hpPct": 0.12 } }
+        { "id": "bul_7", "name": "Unbreakable",   "tier": 4, "cost": 4, "req": ["bul_5", "bul_6"], "desc": "+8 VIT and +12% Max HP",  "mods": { "vit": 8, "hpPct": 0.12 } },
+        { "id": "bul_8", "name": "Thick Hide",    "tier": 2, "cost": 2, "req": ["bul_2"],          "desc": "+6% Max HP",              "mods": { "hpPct": 0.06 } },
+        { "id": "bul_9", "name": "Juggernaut",    "tier": 4, "cost": 4, "req": ["bul_7"],          "desc": "+8% Dodge and +6% Lifesteal", "mods": { "dodge": 0.08, "lifesteal": 0.06 } }
       ]
     },
     {
@@ -35,7 +39,9 @@
         { "id": "for_4", "name": "Quick Study",    "tier": 2, "cost": 2, "req": ["for_2"],          "desc": "+12% XP",                  "mods": { "xpBonus": 0.12 } },
         { "id": "for_5", "name": "Fortune's Favor","tier": 3, "cost": 3, "req": ["for_3"],          "desc": "+5 Luck and +0.25 Rarity", "mods": { "luck": 5, "dropBonus": 0.25 } },
         { "id": "for_6", "name": "Midas Touch",    "tier": 3, "cost": 3, "req": ["for_4"],          "desc": "+30% Gold Find",           "mods": { "goldFind": 0.30 } },
-        { "id": "for_7", "name": "Destiny",        "tier": 4, "cost": 4, "req": ["for_5", "for_6"], "desc": "+0.4 Rarity and +20% XP",  "mods": { "dropBonus": 0.4, "xpBonus": 0.2 } }
+        { "id": "for_7", "name": "Destiny",        "tier": 4, "cost": 4, "req": ["for_5", "for_6"], "desc": "+0.4 Rarity and +20% XP",  "mods": { "dropBonus": 0.4, "xpBonus": 0.2 } },
+        { "id": "for_8", "name": "Prospector",     "tier": 2, "cost": 2, "req": ["for_1"],          "desc": "+0.15 Loot Rarity Bias",   "mods": { "dropBonus": 0.15 } },
+        { "id": "for_9", "name": "Windfall",       "tier": 4, "cost": 4, "req": ["for_7"],          "desc": "+40% Gold and +6 Luck",    "mods": { "goldFind": 0.4, "luck": 6 } }
       ]
     },
     {
@@ -47,7 +53,29 @@
         { "id": "ars_4", "name": "Efficiency",    "tier": 2, "cost": 2, "req": ["ars_2"],          "desc": "-15% Ability Cost",         "mods": { "costReduction": 0.15 } },
         { "id": "ars_5", "name": "Overcharge",    "tier": 3, "cost": 3, "req": ["ars_3"],          "desc": "+20% Ability Power",        "mods": { "abilityPower": 0.20 } },
         { "id": "ars_6", "name": "Vampirism",     "tier": 3, "cost": 3, "req": ["ars_4"],          "desc": "+6% Lifesteal",             "mods": { "lifesteal": 0.06 } },
-        { "id": "ars_7", "name": "Apex",          "tier": 4, "cost": 4, "req": ["ars_5", "ars_6"], "desc": "+25% Ability Power, +5% Crit","mods": { "abilityPower": 0.25, "crit": 0.05 } }
+        { "id": "ars_7", "name": "Apex",          "tier": 4, "cost": 4, "req": ["ars_5", "ars_6"], "desc": "+25% Ability Power, +5% Crit","mods": { "abilityPower": 0.25, "crit": 0.05 } },
+        { "id": "ars_8", "name": "Battle Trance", "tier": 2, "cost": 2, "req": ["ars_2"],          "desc": "+8% Ability Power",          "mods": { "abilityPower": 0.08 } },
+        { "id": "ars_9", "name": "Bloodthirst",   "tier": 4, "cost": 4, "req": ["ars_7"],          "desc": "+8% Lifesteal and +20% Crit Damage", "mods": { "lifesteal": 0.08, "critDmg": 0.20 } }
+      ]
+    },
+    {
+      "id": "arts", "name": "Combat Arts", "color": "#ff7e9d",
+      "skills": [
+        { "id": "war_a1",  "name": "Shield Bash",     "class": "warrior", "tier": 1, "cost": 2, "req": [],         "desc": "160% strike that may stun.",                "ability": { "id": "shield_bash",  "name": "Shield Bash",     "kind": "attack", "cost": 15, "mult": 1.6, "applyStatus": "shock", "statusChance": 0.6 } },
+        { "id": "war_a2",  "name": "Cleave",          "class": "warrior", "tier": 2, "cost": 3, "req": ["war_a1"], "desc": "A sweeping blow for 200% weapon damage.",   "ability": { "id": "cleave",       "name": "Cleave",          "kind": "attack", "cost": 28, "mult": 2.0 } },
+        { "id": "war_a3",  "name": "Execute",         "class": "warrior", "tier": 3, "cost": 4, "req": ["war_a2"], "desc": "160% (×2 below 30% enemy HP).",             "ability": { "id": "execute",      "name": "Execute",         "kind": "attack", "cost": 35, "mult": 1.6, "executeThreshold": 0.3, "executeMult": 2.0 } },
+
+        { "id": "mage_a1", "name": "Frost Lance",     "class": "mage",    "tier": 1, "cost": 2, "req": [],          "desc": "140% INT ice spell; chills.",              "ability": { "id": "frost_lance",  "name": "Frost Lance",     "kind": "spell",  "cost": 18, "mult": 1.4, "scale": "int", "element": "ice",       "applyStatus": "chill", "statusChance": 0.9 } },
+        { "id": "mage_a2", "name": "Chain Lightning", "class": "mage",    "tier": 2, "cost": 3, "req": ["mage_a1"], "desc": "170% INT lightning; may shock.",           "ability": { "id": "chain_light", "name": "Chain Lightning", "kind": "spell",  "cost": 28, "mult": 1.7, "scale": "int", "element": "lightning", "applyStatus": "shock", "statusChance": 0.7 } },
+        { "id": "mage_a3", "name": "Meteor",          "class": "mage",    "tier": 3, "cost": 4, "req": ["mage_a2"], "desc": "260% INT fire; sets ablaze.",              "ability": { "id": "meteor",       "name": "Meteor",          "kind": "spell",  "cost": 42, "mult": 2.6, "scale": "int", "element": "fire",      "applyStatus": "burn",  "statusChance": 0.9 } },
+
+        { "id": "rogue_a1","name": "Poison Strike",   "class": "rogue",   "tier": 1, "cost": 2, "req": [],           "desc": "120% strike that poisons.",                "ability": { "id": "poison_strike","name": "Poison Strike",   "kind": "attack", "cost": 14, "mult": 1.2, "applyStatus": "burn",  "statusChance": 1.0 } },
+        { "id": "rogue_a2","name": "Shadowstep",      "class": "rogue",   "tier": 2, "cost": 3, "req": ["rogue_a1"],"desc": "Guaranteed-crit 180% strike.",             "ability": { "id": "shadowstep",   "name": "Shadowstep",      "kind": "attack", "cost": 24, "mult": 1.8, "guaranteedCrit": true } },
+        { "id": "rogue_a3","name": "Assassinate",     "class": "rogue",   "tier": 3, "cost": 4, "req": ["rogue_a2"],"desc": "220% guaranteed crit with bonus crit damage.","ability": { "id": "assassinate",  "name": "Assassinate",     "kind": "attack", "cost": 38, "mult": 2.2, "guaranteedCrit": true, "critBonus": 0.5 } },
+
+        { "id": "cler_a1", "name": "Smite",           "class": "cleric",  "tier": 1, "cost": 2, "req": [],           "desc": "150% INT holy spell.",                     "ability": { "id": "smite",        "name": "Smite",           "kind": "spell",  "cost": 18, "mult": 1.5, "scale": "int", "element": "light" } },
+        { "id": "cler_a2", "name": "Renew",           "class": "cleric",  "tier": 2, "cost": 3, "req": ["cler_a1"], "desc": "Heal 30% HP and smite for 100% INT.",      "ability": { "id": "renew",        "name": "Renew",           "kind": "spell",  "cost": 26, "mult": 1.0, "scale": "int", "element": "light", "healPct": 0.3 } },
+        { "id": "cler_a3", "name": "Holy Nova",       "class": "cleric",  "tier": 3, "cost": 4, "req": ["cler_a2"], "desc": "Heal 20% HP and blast for 200% INT.",      "ability": { "id": "holy_nova",    "name": "Holy Nova",       "kind": "spell",  "cost": 42, "mult": 2.0, "scale": "int", "element": "light", "healPct": 0.2 } }
       ]
     }
   ]
