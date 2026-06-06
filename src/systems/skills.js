@@ -61,3 +61,16 @@ export function unlockSkill(player, data, id) {
 export function unlockedCount(player) {
   return player.skills.length;
 }
+
+/** Skills visible to this player (class-gated skills only show for their class). */
+export function visibleSkills(data, player, branch) {
+  return branch.skills.filter((s) => !s.class || s.class === player.classId);
+}
+
+/** Active combat abilities the player has unlocked from the tree. */
+export function unlockedAbilities(data, player) {
+  const set = new Set(player.skills);
+  return allSkills(data)
+    .filter((s) => s.ability && set.has(s.id))
+    .map((s) => s.ability);
+}

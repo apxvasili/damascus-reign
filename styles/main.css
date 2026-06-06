@@ -202,57 +202,111 @@ body {
 @keyframes shimmer { to { background-position: 200% center; } }
 @keyframes jitter { 0% { transform: translate(0,0); } 50% { transform: translate(0.6px,-0.6px); } 100% { transform: translate(-0.6px,0.4px); } }
 
-/* ---- screen flash on drop ---- */
+/* ============================================================
+   DROP CELEBRATIONS — escalating, cinematic, composed from layers
+   ============================================================ */
+
+/* quick screen tint, fires on every celebrated drop */
 .drop-flash {
   position: fixed; inset: 0; z-index: 60; pointer-events: none;
-  background: radial-gradient(circle at 50% 50%, var(--c) 0%, transparent 65%);
-  opacity: 0; animation: flashFade 1.2s ease-out forwards;
+  background: radial-gradient(circle at 50% 42%, var(--c) 0%, transparent 60%);
+  opacity: 0; animation: flashFade 1.2s ease-out forwards; mix-blend-mode: screen;
 }
-@keyframes flashFade { 0% { opacity: 0; } 12% { opacity: 0.5; } 100% { opacity: 0; } }
+@keyframes flashFade { 0% { opacity: 0; } 10% { opacity: 0.55; } 100% { opacity: 0; } }
 
-/* ---- centered drop banner (S and above) ---- */
-.drop-banner {
-  position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%) scale(0.6);
-  z-index: 70; pointer-events: none; text-align: center;
-  padding: 18px 46px; border: 2px solid var(--c); border-radius: 6px;
-  background: rgba(8,7,5,0.86); box-shadow: 0 0 40px var(--c), inset 0 0 30px rgba(0,0,0,0.6);
-  opacity: 0; animation: bannerIn 0.45s cubic-bezier(.2,1.4,.4,1) forwards;
-}
-.drop-banner.out { animation: bannerOut 0.7s ease-in forwards; }
-.drop-banner .db-tier {
-  font-size: 3.4em; font-weight: bold; line-height: 1; color: var(--c);
-  text-shadow: 0 0 18px var(--c);
-}
-.drop-banner .db-label { letter-spacing: 4px; color: var(--c); margin-top: 4px; font-size: 0.95em; }
-.drop-banner .db-name { color: #fff; margin-top: 8px; font-size: 1.15em; }
+.celebration { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
+.celebration.out { animation: celeOut 0.7s ease-in forwards; }
+@keyframes celeOut { to { opacity: 0; } }
 
+/* darken everything else so the drop owns the screen */
+.cele-backdrop {
+  position: absolute; inset: 0; background: radial-gradient(circle at 50% 42%, transparent 8%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.82) 100%);
+  opacity: 0; animation: backdropIn 0.5s ease-out forwards;
+}
+.cele-l4 .cele-backdrop { animation: backdropIn4 0.5s ease-out forwards; }
+.cele-l5 .cele-backdrop { animation: backdropIn5 0.5s ease-out forwards; }
+@keyframes backdropIn  { from { opacity: 0; } to { opacity: 0.7; } }
+@keyframes backdropIn4 { from { opacity: 0; } to { opacity: 0.9; } }
+@keyframes backdropIn5 { from { opacity: 0; } to { opacity: 1; } }
+
+/* rotating god-rays behind the banner */
+.cele-rays {
+  position: absolute; left: 50%; top: 42%; width: 200vmax; height: 200vmax;
+  transform: translate(-50%, -50%); opacity: 0;
+  background: repeating-conic-gradient(from 0deg, var(--c) 0deg 2deg, transparent 2deg 12deg);
+  -webkit-mask: radial-gradient(circle, #000 0%, transparent 42%);
+          mask: radial-gradient(circle, #000 0%, transparent 42%);
+  mix-blend-mode: screen; animation: raysIn 0.6s ease-out forwards, raysSpin 14s linear infinite;
+}
+.cele-x .cele-rays { background: repeating-conic-gradient(from 0deg, #ff4d4d 0deg 2deg, #ffe14d 2deg 5deg, #43f7e6 5deg 8deg, #b06bff 8deg 11deg, transparent 11deg 13deg); }
+@keyframes raysIn { from { opacity: 0; } to { opacity: 0.14; } }
+@keyframes raysSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+/* expanding shock rings */
+.cele-shock {
+  position: absolute; left: 50%; top: 42%; width: 40px; height: 40px; margin: -20px 0 0 -20px;
+  border: 3px solid var(--c); border-radius: 50%; opacity: 0;
+  box-shadow: 0 0 24px var(--c); animation: shock 1.1s cubic-bezier(.1,.7,.3,1) forwards;
+}
+.cele-shock2 { animation-delay: 0.18s; }
+@keyframes shock {
+  0% { opacity: 0.9; transform: scale(0.2); }
+  100% { opacity: 0; transform: scale(26); }
+}
+
+/* radial particle sparks */
+.cele-sparks { position: absolute; left: 50%; top: 42%; }
+.cele-sparks span {
+  position: absolute; width: var(--s); height: var(--s); border-radius: 50%;
+  background: var(--c); box-shadow: 0 0 8px var(--c); opacity: 0;
+  transform: rotate(var(--a)) translateX(0);
+  animation: spark 1.5s ease-out forwards; animation-delay: var(--delay);
+}
+.cele-x .cele-sparks span:nth-child(4n) { background: #43f7e6; box-shadow: 0 0 8px #43f7e6; }
+.cele-x .cele-sparks span:nth-child(4n+1) { background: #ffe14d; box-shadow: 0 0 8px #ffe14d; }
+.cele-x .cele-sparks span:nth-child(4n+2) { background: #b06bff; box-shadow: 0 0 8px #b06bff; }
+@keyframes spark {
+  0% { opacity: 0; transform: rotate(var(--a)) translateX(0) scale(1); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) translateY(-30px) scale(0.3); }
+}
+
+/* the banner */
+.cele-banner {
+  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(0.6);
+  text-align: center; padding: 20px 54px; border: 2px solid var(--c); border-radius: 8px;
+  background: rgba(8,7,5,0.9); box-shadow: 0 0 50px var(--c), inset 0 0 36px rgba(0,0,0,0.7);
+  opacity: 0; animation: bannerIn 0.55s cubic-bezier(.18,1.5,.35,1) forwards;
+}
+.cele-banner .cele-tier {
+  font-size: 4em; font-weight: bold; line-height: 1; color: var(--c);
+  text-shadow: 0 0 22px var(--c), 0 0 44px var(--c);
+}
+.cele-banner .cele-label { letter-spacing: 6px; color: var(--c); margin-top: 6px; font-size: 0.95em; }
+.cele-banner .cele-name { color: #fff; margin-top: 10px; font-size: 1.2em; text-shadow: 0 0 10px rgba(255,255,255,0.4); }
+.cele-l4 .cele-banner .cele-tier { font-size: 4.6em; animation: glowPulse 1.2s ease-in-out infinite; }
 @keyframes bannerIn { from { opacity: 0; transform: translate(-50%,-50%) scale(0.6); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
-@keyframes bannerOut { to { opacity: 0; transform: translate(-50%,-50%) scale(1.25); } }
 
-/* SS / SSS get an extra pulse */
-.drop-ss .db-tier, .drop-sss .db-tier { animation: glowPulse 0.6s ease-in-out infinite; }
-.drop-sss { animation: bannerIn 0.45s cubic-bezier(.2,1.4,.4,1) forwards, hueShift 3s linear infinite; }
-
-/* X — the screen loses its mind */
-.drop-x {
-  animation: bannerIn 0.45s cubic-bezier(.2,1.4,.4,1) forwards, xShake 0.12s steps(2) infinite, hueShift 1.2s linear infinite;
-  border-width: 3px;
-  box-shadow: 0 0 60px var(--c), 0 0 120px #b06bff, inset 0 0 40px rgba(0,0,0,0.5);
-}
-.drop-x .db-tier {
-  font-size: 4.6em;
+/* X — rainbow tier glyph + chromatic aberration */
+.cele-x .cele-banner { border-width: 3px; border-color: #fff; box-shadow: 0 0 70px #43f7e6, 0 0 140px #b06bff, inset 0 0 40px rgba(0,0,0,0.6); }
+.cele-x .cele-tier {
   background: linear-gradient(90deg, #ff4d4d, #ffe14d, #43f7e6, #b06bff, #ff4d4d);
   background-size: 300% auto; -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; animation: shimmer 0.9s linear infinite;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: shimmer 1s linear infinite, aberration 0.18s steps(2) infinite;
 }
-.drop-x .db-label { color: #fff; text-shadow: 0 0 12px #43f7e6; }
-.drop-x::before {
-  content: ""; position: fixed; inset: -50vmax; z-index: -1;
-  background: radial-gradient(circle, rgba(67,247,230,0.18), transparent 60%);
-  animation: hueShift 1.2s linear infinite;
+.cele-x .cele-name { animation: aberration 0.2s steps(2) infinite; }
+@keyframes aberration {
+  0%   { text-shadow: -2px 0 #ff2d2d, 2px 0 #2dffff; }
+  100% { text-shadow:  2px 0 #ff2d2d, -2px 0 #2dffff; }
 }
-@keyframes xShake { 0% { transform: translate(-50%,-50%) rotate(-0.6deg); } 100% { transform: translate(-50%,-50%) rotate(0.6deg); } }
-@keyframes hueShift { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+@keyframes shimmer { to { background-position: 300% center; } }
+
+/* subtle, controlled screen shake (no wobble) */
+.shake-soft { animation: shakeSoft 0.65s cubic-bezier(.36,.07,.19,.97) both; }
+.shake-hard { animation: shakeHard 0.9s cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes shakeSoft { 10%,90%{transform:translateX(-1px)} 30%,70%{transform:translateX(2px)} 50%{transform:translateX(-2px)} }
+@keyframes shakeHard { 10%,90%{transform:translate(-2px,1px)} 30%,70%{transform:translate(3px,-1px)} 50%{transform:translate(-3px,1px)} }
 
 /* ============================================================
    SKILL TREE
@@ -263,3 +317,32 @@ body {
 .skill-on  { color: var(--success); font-weight: bold; }                 /* unlocked */
 .skill-can { color: var(--highlight); font-weight: bold; text-shadow: 0 0 6px rgba(212,175,55,0.5); } /* available now */
 .skill-off { color: #6b6b6b; }                                          /* locked */
+
+/* ============================================================
+   HUD extras — status tags, damage flash, low-HP vignette
+   ============================================================ */
+.status-row { margin: 4px 0 2px; display: flex; flex-wrap: wrap; gap: 4px; }
+.status-tag {
+  font-size: 0.72em; padding: 1px 6px; border-radius: 3px; border: 1px solid currentColor;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.status-burn  { color: #e25822; }
+.status-chill { color: #7fd4e8; }
+.status-shock { color: #f4d03f; }
+
+/* HP/enemy bar damage flash */
+.meter.hit { animation: meterHit 0.4s ease-out; }
+@keyframes meterHit {
+  0% { background: rgba(192,57,43,0.55); box-shadow: 0 0 12px rgba(192,57,43,0.6); }
+  100% { background: transparent; box-shadow: none; }
+}
+
+/* low-HP vignette — pulsing danger glow at the screen edges */
+#vignette.lowhp-pulse, body.low-hp #vignette {
+  box-shadow: inset 0 0 180px 40px rgba(0,0,0,0.85), inset 0 0 120px 10px rgba(192,57,43,0.55);
+  animation: lowHpPulse 1.1s ease-in-out infinite;
+}
+@keyframes lowHpPulse {
+  0%,100% { box-shadow: inset 0 0 180px 40px rgba(0,0,0,0.85), inset 0 0 100px 8px rgba(192,57,43,0.35); }
+  50%     { box-shadow: inset 0 0 180px 40px rgba(0,0,0,0.85), inset 0 0 150px 18px rgba(192,57,43,0.7); }
+}

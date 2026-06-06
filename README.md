@@ -56,9 +56,10 @@ runs death isn't permanent (respawn, lose some gold); on **Hardcore** it is.
 | **Classes** | Warrior, Mage, Rogue, Cleric — each with unique stats and a signature ability |
 | **Difficulty** | Tender → Tempered → Brutal → Damascus: scale mob HP/damage, loot, XP & gold. Chosen at creation, shown next to your name |
 | **Hardcore** | Optional permadeath layer with boosted loot & XP — one life, richer spoils |
-| **Skill tree** | 28 passive skills across 4 branches (Might / Bulwark / Fortune / Arsenal); 1 point per level, prerequisite chains |
+| **Skill tree** | 48 skills across 5 branches — Might / Bulwark / Fortune / Arsenal (passives) + **Combat Arts** (class-specific active abilities); 1 point per level, prerequisite chains |
+| **Combat abilities** | Each class starts with a signature ability and unlocks more (e.g. Frost Lance, Execute, Assassinate, Holy Nova) — `abilities` to list, `ability <n>` to cast |
 | **Mining** | `dig` ore (10 tiers `F→X`) that gets rarer the deeper you go; craft a pickaxe ladder (each reaches one rarity higher), smith gear whose rarity matches the ore, smelt ore for gold, and survive guardian ambushes |
-| **Loot** | Procedural gear, **10 rarity tiers** (`F→X`) with tier badges & escalating drop animations, 9 slots, rollable affixes |
+| **Loot** | Procedural gear, **10 rarity tiers** (`F→X`) with tier badges & **escalating cinematic drop celebrations** (god-rays, shockwaves, particle bursts, screen-shake, rainbow chroma for `X`), 9 slots, rollable affixes |
 | **Combat** | Turn-based, crits, dodge, lifesteal, elemental matchups (burn / chill / shock / wither), bosses |
 | **Forging** | `+N` enhancement with rising risk |
 | **Enchanting** | Roll and replace affixes with arcane essence |

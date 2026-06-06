@@ -126,29 +126,68 @@ export class Terminal {
   }
 
   /**
-   * Fire a rarity drop celebration. `flash` tints the screen; `intense` adds a
-   * full banner. The top tiers (X / SSS) get extra-unhinged variants via CSS.
+   * Cinematic, tiered drop celebration. `level` (1–5) scales the spectacle:
+   *   1 — color flash            (C/B)
+   *   2 — flash + banner          (A)
+   *   3 — soft dim + shockwave + sparks + banner   (S/SS)
+   *   4 — hard dim + god-rays + dense sparks + shake (SSS)
+   *   5 — all of the above + rainbow + chromatic aberration (X)
+   * Effects are composed from discrete layers and cleaned up automatically.
    */
-  dropFx({ tier, label, color, name, flash = true, intense = false }) {
-    if (flash) {
-      const f = document.createElement("div");
-      f.className = "drop-flash";
-      f.style.setProperty("--c", color);
-      document.body.appendChild(f);
-      setTimeout(() => f.remove(), 1300);
+  dropFx({ tier, label, color, name, level = 1 }) {
+    // Always a quick screen tint.
+    const flash = document.createElement("div");
+    flash.className = "drop-flash";
+    flash.style.setProperty("--c", color);
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 1300);
+    if (level <= 1) return;
+
+    const dur = level >= 5 ? 3800 : level >= 4 ? 3200 : 2600;
+    const stage = document.createElement("div");
+    stage.className = `celebration cele-l${level}${tier === "X" ? " cele-x" : ""}`;
+    stage.style.setProperty("--c", color);
+
+    const parts = [];
+    if (level >= 3) parts.push(`<div class="cele-backdrop"></div>`);
+    if (level >= 4) parts.push(`<div class="cele-rays"></div>`);
+    if (level >= 3) parts.push(`<div class="cele-shock"></div><div class="cele-shock cele-shock2"></div>`);
+
+    // particle sparks
+    const sparkCount = level >= 5 ? 46 : level >= 4 ? 34 : level >= 3 ? 20 : 0;
+    if (sparkCount) {
+      let sp = `<div class="cele-sparks">`;
+      for (let i = 0; i < sparkCount; i++) {
+        const ang = (360 / sparkCount) * i + (i % 3) * 7;
+        const dist = 120 + (i % 5) * 60;
+        const delay = (i % 7) * 40;
+        const size = 2 + (i % 4);
+        sp += `<span style="--a:${ang}deg; --d:${dist}px; --delay:${delay}ms; --s:${size}px"></span>`;
+      }
+      sp += `</div>`;
+      parts.push(sp);
     }
-    if (!intense) return;
-    const variant = tier === "X" ? " drop-x" : tier === "SSS" ? " drop-sss" : tier === "SS" ? " drop-ss" : "";
-    const b = document.createElement("div");
-    b.className = `drop-banner${variant}`;
-    b.style.setProperty("--c", color);
-    b.innerHTML =
-      `<div class="db-tier">${tier}</div>` +
-      `<div class="db-label">${escapeText(label)} DROP</div>` +
-      `<div class="db-name">${escapeText(name)}</div>`;
-    document.body.appendChild(b);
-    setTimeout(() => b.classList.add("out"), 2300);
-    setTimeout(() => b.remove(), 3100);
+
+    parts.push(
+      `<div class="cele-banner">` +
+        `<div class="cele-tier">${escapeText(tier)}</div>` +
+        `<div class="cele-label">${escapeText(label)} DROP</div>` +
+        `<div class="cele-name">${escapeText(name)}</div>` +
+      `</div>`
+    );
+
+    stage.innerHTML = parts.join("");
+    document.body.appendChild(stage);
+
+    // screen shake for the big ones
+    if (level >= 4) {
+      const gc = document.getElementById("game-container");
+      gc?.classList.add(level >= 5 ? "shake-hard" : "shake-soft");
+      setTimeout(() => gc?.classList.remove("shake-hard", "shake-soft"), level >= 5 ? 900 : 650);
+    }
+
+    setTimeout(() => stage.classList.add("out"), dur - 700);
+    setTimeout(() => stage.remove(), dur);
   }
 }
 

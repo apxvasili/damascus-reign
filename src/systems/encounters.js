@@ -45,6 +45,21 @@ export function resolveChoice(player, event, choiceIndex, data, rng) {
     player.addItem(item);
     lines.push({ msg: `Found: ${displayName(item)}`, cls: "loot", item });
   }
+  if (e.ore) {
+    // e.ore: { id, count } for a specific ore, or { count, maxTier } for a random one.
+    let ore = null;
+    if (e.ore.id) ore = data.mining.ores.find((o) => o.id === e.ore.id);
+    else {
+      const cap = e.ore.maxTier ? data.rarities.findIndex((r) => r.tier === e.ore.maxTier) : 3;
+      const pool = data.mining.ores.filter((o) => data.rarities.findIndex((r) => r.tier === o.tier) <= cap);
+      ore = rng.pick(pool.length ? pool : data.mining.ores);
+    }
+    const count = e.ore.count ?? 3;
+    if (ore) {
+      player.ores[ore.id] = (player.ores[ore.id] ?? 0) + count;
+      lines.push({ msg: `+${count}× ${ore.name}.`, cls: "item" });
+    }
+  }
   if (e.fight) { fight = true; }
 
   return { ok: true, text: outcome.text, lines, fight, leveled };

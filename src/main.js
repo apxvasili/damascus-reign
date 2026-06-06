@@ -21,7 +21,7 @@ import { rollStock, buy, sell } from "./systems/shop.js";
 import { rollEvent, resolveChoice, narrationPrompt } from "./systems/encounters.js";
 import { SaveManager } from "./systems/save.js";
 import { AINarrator, PROVIDERS } from "./systems/ai.js";
-import { allSkills, skillById, skillStatus, unlockSkill, applySkillMods } from "./systems/skills.js";
+import { allSkills, skillById, skillStatus, unlockSkill, applySkillMods, unlockedAbilities, visibleSkills } from "./systems/skills.js";
 import * as Mining from "./systems/mining.js";
 
 const STATE = { MENU: "MENU", IDLE: "IDLE", COMBAT: "COMBAT", ENCOUNTER: "ENCOUNTER", BUSY: "BUSY", SKILLS: "SKILLS", MINE: "MINE" };
@@ -191,7 +191,8 @@ class Game {
 
     // --- combat ---
     r.register({ name: "attack", aliases: ["a"], desc: "Strike the enemy.", group: "Combat", states: [STATE.COMBAT], run: () => this.cmdAttack() });
-    r.register({ name: "ability", aliases: ["skill", "cast"], desc: "Use your class ability.", group: "Combat", states: [STATE.COMBAT], run: () => this.cmdAbility() });
+    r.register({ name: "ability", usage: "ability [n]", aliases: ["skill", "cast"], desc: "Use an ability (n = which).", group: "Combat", states: [STATE.COMBAT], run: (a) => this.cmdAbility(a) });
+    r.register({ name: "abilities", aliases: ["moves"], desc: "List your combat abilities.", group: "Combat", states: [STATE.COMBAT], run: () => this.cmdAbilities() });
     r.register({ name: "flee", aliases: ["run"], desc: "Attempt to escape.", group: "Combat", states: [STATE.COMBAT], run: () => this.cmdFlee() });
 
     // use works in both field and combat
@@ -463,12 +464,18 @@ class Game {
   }
 
   /** Trigger a visual celebration for a noteworthy gear drop. */
+  /** Map a rarity index to a celebration intensity (0 = none). */
+  celebrationLevel(idx) {
+    return idx >= 9 ? 5 : idx >= 8 ? 4 : idx >= 6 ? 3 : idx >= 5 ? 2 : idx >= 3 ? 1 : 0;
+  }
+
   celebrateDrop(item) {
     if (!item || item.kind === "consumable" || !item.rarity) return;
     const idx = this.data.rarities.findIndex((r) => r.tier === item.rarity);
-    if (idx < 4) return; // F..C drop quietly
+    const level = this.celebrationLevel(idx);
+    if (!level) return; // F/E drop quietly
     const r = rarityOf(item, this.data);
-    this.term.dropFx({ tier: r.tier, label: r.label, color: r.color, name: item.name, intense: idx >= 6 });
+    this.term.dropFx({ tier: r.tier, label: r.label, color: r.color, name: item.name, level });
   }
 
   cmdInventory() {
@@ -632,11 +639,35 @@ class Game {
     const el = this.data.elements[enemy.element];
     this.log(`A <b style="color:var(--danger)">${enemy.name}</b> (Lvl ${enemy.level}${enemy.boss ? ", BOSS" : ""}) blocks your path!`, "enemy");
     if (enemy.element !== "physical") this.log(`It radiates <span style="color:${el?.color}">${el?.name}</span>.`, "cmd-desc-line");
-    this.log(`Commands: <b>attack</b>, <b>ability</b> (${this.player.classDef.ability.name}, ${this.player.classDef.ability.cost} ${this.player.resourceName}), <b>use &lt;n&gt;</b>, <b>flee</b>.`, "combat");
+    const abs = this.getAbilities();
+    const abHint = abs.length > 1 ? `<b>abilities</b> (${abs.length} known)` : `<b>ability</b> (${abs[0].name})`;
+    this.log(`Commands: <b>attack</b>, ${abHint}, <b>use &lt;n&gt;</b>, <b>flee</b>.`, "combat");
+  }
+
+  /** Base class ability plus any unlocked from the Combat Arts tree. */
+  getAbilities() {
+    return [this.player.classDef.ability, ...unlockedAbilities(this.data, this.player)];
+  }
+
+  cmdAbilities() {
+    const abs = this.getAbilities();
+    this.term.rule("ABILITIES");
+    abs.forEach((a, i) => {
+      const cost = Math.max(1, Math.round(a.cost * (1 - (this.player.costReduction ?? 0))));
+      this.log(`<span class="handle">${i + 1}</span> <b class="msg-ability">${esc(a.name)}</b> <span class="cmd-desc">${cost} ${this.player.resourceName} — ${esc(a.desc ?? a.kind)}</span>`);
+    });
+    this.log(`<span class="cmd-desc">cast with <b>ability &lt;n&gt;</b> (or just <b>ability</b> for #1)</span>`);
   }
 
   cmdAttack() { this.combat.playerAttack(); this.afterCombatAction(); }
-  cmdAbility() { this.combat.playerAbility(); this.afterCombatAction(); }
+  cmdAbility(arg) {
+    const abs = this.getAbilities();
+    let i = parseInt(arg, 10);
+    i = isNaN(i) ? 0 : i - 1;
+    if (i < 0 || i >= abs.length) return this.log(`No ability #${arg}. Type <b>abilities</b> to list them.`, "error");
+    this.combat.playerAbility(abs[i]);
+    this.afterCombatAction();
+  }
   cmdFlee() { this.combat.flee(); this.afterCombatAction(); }
 
   afterCombatAction() {
@@ -790,7 +821,8 @@ class Game {
     this.log(`Gold ${p.gold} · Shards ${p.shards} · Essence ${p.essence}`);
     this.log(`Difficulty ${this.diffTag(p.difficulty, p.hardcore)} · Skill points ${p.skillPoints} (${p.skills.length} unlocked)`);
     if (p.pickaxe) this.log(`Pickaxe ${esc(p.pickaxe.name)} · Mine depth ${p.mineDepth}m · Ore value ${Mining.satchelValue(this.data, p)}g`);
-    this.log(`Ability — <b>${p.classDef.ability.name}</b>: ${esc(p.classDef.ability.desc)}`, "cmd-desc-line");
+    const known = this.getAbilities();
+    this.log(`Abilities (${known.length}): ${known.map((a) => a.name).join(", ")}`, "cmd-desc-line");
   }
 
   // =================== DIFFICULTY ===================
@@ -824,9 +856,12 @@ class Game {
     const ICON = { unlocked: "✓", available: "◆", "needs-req": "○", "needs-points": "◌" };
 
     for (const branch of this.data.skills.branches) {
-      this.log(`<span class="skill-branch" style="color:${branch.color}">╒═ ${branch.name.toUpperCase()} ${"═".repeat(Math.max(2, 22 - branch.name.length))}╕</span>`);
+      const skills = visibleSkills(this.data, this.player, branch);
+      if (!skills.length) continue;
+      const suffix = branch.id === "arts" ? ` · ${this.player.classDef.name}` : "";
+      this.log(`<span class="skill-branch" style="color:${branch.color}">╒═ ${branch.name.toUpperCase()}${suffix} ${"═".repeat(Math.max(2, 20 - branch.name.length - suffix.length))}╕</span>`);
       const byTier = {};
-      for (const s of branch.skills) (byTier[s.tier] ??= []).push(s);
+      for (const s of skills) (byTier[s.tier] ??= []).push(s);
       for (const tier of Object.keys(byTier).sort()) {
         for (const s of byTier[tier]) {
           const idx = this.skillIndex.push(s.id);
@@ -899,8 +934,9 @@ class Game {
 
     if (res.ore) {
       Mining.addOre(p, res.ore.id, res.count);
-      this.log(`⛏ You unearth <b style="color:${res.ore.color}">${res.ore.count > 1 ? "" : ""}${res.count}× ${esc(res.ore.name)}</b> <span class="cmd-desc">[${res.ore.tier}]</span>.`, "loot");
-      if (Mining.tierIndex(this.data, res.ore.tier) >= 5) this.term.dropFx({ tier: res.ore.tier, label: `${res.ore.name.toUpperCase()}`, color: res.ore.color, name: `${res.count}× ${res.ore.name}`, intense: Mining.tierIndex(this.data, res.ore.tier) >= 7 });
+      this.log(`⛏ You unearth <b style="color:${res.ore.color}">${res.count}× ${esc(res.ore.name)}</b> <span class="cmd-desc">[${res.ore.tier}]</span>.`, "loot");
+      const oreLevel = this.celebrationLevel(Mining.tierIndex(this.data, res.ore.tier));
+      if (oreLevel >= 2) this.term.dropFx({ tier: res.ore.tier, label: res.ore.name.toUpperCase(), color: res.ore.color, name: `${res.count}× ${res.ore.name}`, level: oreLevel });
     } else {
       this.log("⛏ Your pickaxe bites only barren rock.", "system");
     }

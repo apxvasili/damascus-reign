@@ -25,7 +25,14 @@ dispatching a `keydown` Enter event, then read `#output`/`#stats-content`.
 ## Conventions (extra)
 - Skills: `player.skills` (ids) + `player.skillPoints` are the source of truth;
   `applySkillMods(player, data)` re-aggregates `player.skillMods` (consumed in
-  `recalc()`). Call it after load/unlock. 1 point per level.
+  `recalc()`). Call it after load/unlock. 1 point per level. Skills in the
+  `arts` branch carry a `class` (gated by classId) and an `ability` (an active
+  combat move); `getAbilities()` = base class ability + unlocked `arts` abilities.
+- Combat abilities are data-driven: `CombatSession.playerAbility(ab)` handles
+  kinds attack/spell/heal plus `guaranteedCrit`, `executeThreshold/Mult`,
+  `applyStatus`(+`statusChance`), and `healPct`.
+- Drop FX: `terminal.dropFx({tier,label,color,name,level})`; level 1–5 scales
+  the celebration (`Game.celebrationLevel(rarityIndex)`).
 - Difficulty/hardcore are locked at creation. `Game.diffMods()` returns the
   combined mob/loot/xp/gold multipliers; applied in `makeEnemy`, rewards, drops.
 - Mining (`systems/mining.js`): `player.ores` (id→count), `player.pickaxe`,
